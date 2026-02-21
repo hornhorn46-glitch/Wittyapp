@@ -4,10 +4,6 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    plugins {
-        id("com.android.application") version "8.6.0"
-        id("org.jetbrains.kotlin.android") version "1.9.22"
-    }
 }
 
 dependencyResolutionManagement {
@@ -18,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Wittyapp"
+rootProject.name = "WittyApp"
 include(":app")
