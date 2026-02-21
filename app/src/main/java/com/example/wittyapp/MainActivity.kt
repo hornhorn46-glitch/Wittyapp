@@ -35,11 +35,13 @@ import com.example.wittyapp.net.SpaceWeatherApi
 import com.example.wittyapp.ui.SpaceWeatherViewModel
 import com.example.wittyapp.ui.screens.EventsScreen
 import com.example.wittyapp.ui.screens.FullscreenWebImageScreen
+import com.example.wittyapp.ui.screens.GraphsMode
 import com.example.wittyapp.ui.screens.GraphsScreen
 import com.example.wittyapp.ui.screens.NowScreen
 import com.example.wittyapp.ui.screens.SettingsScreen
 import com.example.wittyapp.ui.screens.SunScreen
 import com.example.wittyapp.ui.screens.TutorialScreen
+import com.example.wittyapp.ui.screens.buildGraphSeries
 import com.example.wittyapp.ui.settings.SettingsStore
 import com.example.wittyapp.ui.strings.AppStrings
 import com.example.wittyapp.ui.theme.CosmosTheme
@@ -51,10 +53,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val api = SpaceWeatherApi()
-
-        setContent {
-            AppRoot(api)
-        }
+        setContent { AppRoot(api) }
     }
 }
 
@@ -146,12 +145,16 @@ private fun AppRoot(api: SpaceWeatherApi) {
                         onOpenFull = { url, title -> push(Screen.FULL(url, title)) }
                     )
 
-                    Screen.EARTH_GRAPHS -> GraphsScreen(
-                        vm = vm,
-                        strings = strings,
-                        contentPadding = pad,
-                        onClose = { pop() }
-                    )
+                    Screen.EARTH_GRAPHS -> {
+                        val series = buildGraphSeries(vm.state) // берём из state
+                        GraphsScreen(
+                            title = strings.graphsTitle24h,
+                            series = series,
+                            mode = GraphsMode.EARTH,
+                            strings = strings,
+                            onClose = { pop() }
+                        )
+                    }
 
                     Screen.EARTH_EVENTS -> EventsScreen(
                         vm = vm,
@@ -164,9 +167,9 @@ private fun AppRoot(api: SpaceWeatherApi) {
                         strings = strings,
                         contentPadding = pad,
                         currentLanguage = lang,
-                        onSetLanguage = {
-                            lang = it
-                            store.setLanguage(it)
+                        onSetLanguage = { newLang ->
+                            lang = newLang
+                            store.setLanguage(newLang)
                         },
                         onClose = { pop() }
                     )
