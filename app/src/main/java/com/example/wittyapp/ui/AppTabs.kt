@@ -1,8 +1,6 @@
 package com.example.wittyapp.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -63,9 +61,9 @@ fun AppTabs(
                 .padding(pad)
                 .padding(16.dp)
         ) {
+            // Без transitionSpec — так компилируется стабильно на твоей связке.
             AnimatedContent(
                 targetState = tab,
-                transitionSpec = { tween(220) togetherWith tween(220) },
                 label = "tabs"
             ) { t ->
                 when (t) {
@@ -77,3 +75,4 @@ fun AppTabs(
         }
     }
 }
+```0
