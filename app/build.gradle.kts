@@ -30,7 +30,16 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
+        kotlinCompilerExtensionVersion = "1.6.0"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     packaging {
@@ -38,19 +47,20 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
 }
 
-
 dependencies {
+
     val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
     implementation(composeBom)
-    implementation("com.google.android.material:material:1.12.0")
+    androidTestImplementation(composeBom)
 
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
