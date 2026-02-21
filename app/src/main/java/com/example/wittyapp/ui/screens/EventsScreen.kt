@@ -31,7 +31,7 @@ fun EventsScreen(vm: SpaceWeatherViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("События (DONKI)", style = MaterialTheme.typography.headlineMedium)
+        Text("События (DONKI)", style = MaterialTheme.typography.headlineMedium, color = Color.White)
 
         if (events.isEmpty()) {
             Card(colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))) {
@@ -42,14 +42,11 @@ fun EventsScreen(vm: SpaceWeatherViewModel) {
                 )
             }
         } else {
-            events.forEach { e ->
-                EventCard(e)
-            }
+            events.forEach { e -> EventCard(e) }
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // подпись в конце страницы
         Text(
             "тут был Женя",
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
