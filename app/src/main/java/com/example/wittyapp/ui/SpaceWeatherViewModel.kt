@@ -7,8 +7,11 @@ import com.example.wittyapp.net.SpaceWeatherApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -94,14 +97,7 @@ class SpaceWeatherViewModel(
                     density3hAvg = density3hAvg
                 )
 
-                // DONKI (последние 5 дней)
-                val zone = ZoneId.systemDefault()
-                val end = LocalDate.now(zone)
-                val start = end.minusDays(5)
-                val startStr = start.toString()
-                val endStr = end.toString()
-
-                val events = fetchDonkiEvents(startStr, endStr)
+                val events = fetchDonkiEvents(daysBack = 5)
 
                 state = SpaceWeatherUiState(
                     loading = false,
@@ -140,10 +136,16 @@ class SpaceWeatherViewModel(
         }
     }
 
-    private suspend fun fetchDonkiEvents(start: String, end: String): List<DonkiEvent> {
-        val cme = runCatching { api.fetchDonkiCme(start, end) }.getOrDefault(JsonArray(emptyList()))
-        val flr = runCatching { api.fetchDonkiFlares(start, end) }.getOrDefault(JsonArray(emptyList()))
-        val gst = runCatching { api.fetchDonkiGeomagneticStorm(start, end) }.getOrDefault(JsonArray(emptyList()))
+    private suspend fun fetchDonkiEvents(daysBack: Long): List<DonkiEvent> {
+        val zone = ZoneId.systemDefault()
+        val end = LocalDate.now(zone)
+        val start = end.minusDays(daysBack)
+        val startStr = start.toString()
+        val endStr = end.toString()
+
+        val cme = runCatching { api.fetchDonkiCme(startStr, endStr) }.getOrDefault(JsonArray(emptyList()))
+        val flr = runCatching { api.fetchDonkiFlares(startStr, endStr) }.getOrDefault(JsonArray(emptyList()))
+        val gst = runCatching { api.fetchDonkiGeomagneticStorm(startStr, endStr) }.getOrDefault(JsonArray(emptyList()))
 
         return buildList {
             addAll(cme.mapNotNull { it.toDonkiEvent("CME") })
@@ -154,7 +156,7 @@ class SpaceWeatherViewModel(
 }
 
 private fun JsonElement.toDonkiEvent(type: String): DonkiEvent? {
-    val o = this as? kotlinx.serialization.json.JsonObject ?: return null
+    val o = this as? JsonObject ?: return null
 
     val time =
         o["startTime"]?.jsonPrimitive?.contentOrNull
