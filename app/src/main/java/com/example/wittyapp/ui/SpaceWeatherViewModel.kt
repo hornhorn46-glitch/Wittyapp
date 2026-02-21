@@ -1,9 +1,13 @@
 package com.example.wittyapp.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.wittyapp.domain.*
 import com.example.wittyapp.net.SpaceWeatherApi
+import com.example.wittyapp.ui.screens.GraphSeries
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,7 +36,7 @@ data class SpaceWeatherUiState(
     val density3hAvg: Double? = null,
     val bz3hAvg: Double? = null,
 
-    // v3
+    // v3 accuracy
     val bzMin3h: Double? = null,
     val fracBzNegative3h: Double? = null,
 
@@ -42,7 +46,7 @@ data class SpaceWeatherUiState(
 
     val events: List<DonkiEvent> = emptyList(),
 
-    // v3 графики (24ч)
+    // 24h graphs
     val kp24: List<GraphPoint> = emptyList(),
     val bz24: List<GraphPoint> = emptyList(),
     val speed24: List<GraphPoint> = emptyList()
@@ -59,7 +63,7 @@ class SpaceWeatherViewModel(
     private val api: SpaceWeatherApi
 ) : ViewModel() {
 
-    var state: SpaceWeatherUiState = SpaceWeatherUiState(loading = true)
+    var state by mutableStateOf(SpaceWeatherUiState(loading = true))
         private set
 
     fun refresh() {
@@ -99,17 +103,14 @@ class SpaceWeatherViewModel(
                 val density3hAvg = plasmaSeries.filter { it.time >= from3h }.map { it.densityCC }.avgOrNull()
                 val bz3hAvg = magSeries.filter { it.time >= from3h }.map { it.bzNt }.avgOrNull()
 
-                // v3: Bz минимум и доля Bz<0
                 val bzValues3h = magSeries
                     .filter { it.time >= from3h }
                     .mapNotNull { it.bzNt }
 
                 val bzMin3h = bzValues3h.minOrNull()
-
                 val fracBzNegative3h = run {
                     val total = bzValues3h.size
-                    if (total == 0) null
-                    else bzValues3h.count { it < 0 }.toDouble() / total.toDouble()
+                    if (total == 0) null else bzValues3h.count { it < 0 }.toDouble() / total.toDouble()
                 }
 
                 val prediction = predictAuroraV3(
@@ -127,7 +128,7 @@ class SpaceWeatherViewModel(
 
                 val events = fetchDonkiEvents(daysBack = 5)
 
-                // v3 графики (24 часа)
+                // 24h graph points
                 val kp24 = kpToGraph24h(kpSeries, now)
                 val bz24 = bzToGraph24h(magSeries, now)
                 val speed24 = speedToGraph24h(plasmaSeries, now)
@@ -171,13 +172,23 @@ class SpaceWeatherViewModel(
         }
     }
 
-    fun startAutoRefresh(periodMs: Long = 5 * 60 * 1000L) {
+    fun startAutoRefresh(periodMs: Long = 10 * 60 * 1000L) {
         viewModelScope.launch {
             while (true) {
                 refresh()
                 delay(periodMs)
             }
         }
+    }
+
+    /** НОРМАЛЬНО: 3 серии на графики за 24 часа */
+    fun simpleGraphSeries(): List<GraphSeries> {
+        val s = state
+        return listOf(
+            GraphSeries(name = "Kp (24ч)", hint = "0..9", points = s.kp24),
+            GraphSeries(name = "Bz (нТ) (24ч)", hint = "ниже 0 — лучше", points = s.bz24),
+            GraphSeries(name = "Скорость (км/с) (24ч)", hint = "солнечный ветер", points = s.speed24)
+        )
     }
 
     private suspend fun fetchDonkiEvents(daysBack: Long): List<DonkiEvent> {
