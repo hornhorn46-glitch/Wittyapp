@@ -35,121 +35,142 @@ class MainActivity : ComponentActivity() {
         val api = SpaceWeatherApi()
 
         setContent {
-            val vm: SpaceWeatherViewModel =
-                viewModel(factory = SimpleFactory { SpaceWeatherViewModel(api) })
+            AppRoot(api = api)
+        }
+    }
+}
 
-            val store = remember { SettingsStore(this) }
-            var lang by remember { mutableStateOf(store.getLanguage()) }
-            val strings = remember(lang) { AppStrings(lang) }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppRoot(api: SpaceWeatherApi) {
+    val vm: SpaceWeatherViewModel =
+        viewModel(factory = SimpleFactory { SpaceWeatherViewModel(api) })
 
-            var mode by remember { mutableStateOf(store.getMode()) }
-            var stack by remember { mutableStateOf(listOf(Screen.rootFor(mode))) }
+    val store = remember { SettingsStore(LocalContext.current) }
 
-            val current = stack.last()
-            val snackbarHostState = remember { SnackbarHostState() }
-            val scope = rememberCoroutineScope()
+    var lang by remember { mutableStateOf(store.getLanguage()) }
+    val strings = remember(lang) { AppStrings(lang) }
 
-            fun push(s: Screen) { stack = stack + s }
-            fun pop(): Boolean =
-                if (stack.size > 1) { stack = stack.dropLast(1); true } else false
-            fun setRoot(s: Screen) { stack = listOf(s) }
+    var mode by remember { mutableStateOf(store.getMode()) }
 
-            var lastBackAt by remember { mutableStateOf(0L) }
+    var stack by remember { mutableStateOf(listOf(Screen.rootFor(mode))) }
+    val current = stack.last()
 
-            BackHandler {
-                if (pop()) return@BackHandler
-                val now = SystemClock.elapsedRealtime()
-                if (now - lastBackAt < 1800L) finish()
-                else {
-                    lastBackAt = now
-                    scope.launch {
-                        snackbarHostState.showSnackbar(strings.exitHint)
-                    }
-                }
-            }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-            CosmosTheme(mode = mode, auroraScore = vm.state.auroraScore) {
-                Scaffold(
-                    snackbarHost = { SnackbarHost(snackbarHostState) },
-                    topBar = {
-                        TopAppBar(
-                            title = {
-                                Text(
-                                    if (mode == AppMode.EARTH)
-                                        strings.titleEarth
-                                    else
-                                        strings.titleSun
-                                )
-                            },
-                            actions = {
-                                IconButton(onClick = { push(Screen.TUTORIAL) }) {
-                                    Icon(Icons.Default.MenuBook, null)
-                                }
+    fun push(s: Screen) { stack = stack + s }
+    fun pop(): Boolean =
+        if (stack.size > 1) { stack = stack.dropLast(1); true } else false
+    fun setRoot(s: Screen) { stack = listOf(s) }
 
-                                ModeToggleRuneButton(
-                                    mode = mode,
-                                    onToggle = {
-                                        mode = if (mode == AppMode.EARTH)
-                                            AppMode.SUN else AppMode.EARTH
-                                        store.setMode(mode)
-                                        setRoot(Screen.rootFor(mode))
-                                    }
-                                )
+    var lastBackAt by remember { mutableStateOf(0L) }
 
-                                IconButton(onClick = { push(Screen.SETTINGS) }) {
-                                    Icon(Icons.Default.Settings, null)
-                                }
+    BackHandler {
+        if (pop()) return@BackHandler
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastBackAt < 1800L) {
+            // закрыть приложение
+            (LocalContext.current as? ComponentActivity)?.finish()
+        } else {
+            lastBackAt = now
+            scope.launch { snackbarHostState.showSnackbar(strings.exitHint) }
+        }
+    }
+
+    CosmosTheme(mode = mode, auroraScore = vm.state.auroraScore) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            if (mode == AppMode.EARTH)
+                                strings.titleEarth
+                            else
+                                strings.titleSun
+                        )
+                    },
+                    actions = {
+                        IconButton(onClick = { push(Screen.TUTORIAL) }) {
+                            Icon(Icons.Default.MenuBook, contentDescription = null)
+                        }
+
+                        ModeToggleRuneButton(
+                            mode = mode,
+                            onToggle = {
+                                mode = if (mode == AppMode.EARTH) AppMode.SUN else AppMode.EARTH
+                                store.setMode(mode)
+                                setRoot(Screen.rootFor(mode))
                             }
                         )
-                    }
-                ) { pad ->
 
-                    AnimatedContent(
-                        targetState = current,
-                        transitionSpec = {
-                            fadeIn(tween(180)) togetherWith fadeOut(tween(180))
-                        },
-                        label = "nav"
-                    ) { s ->
-
-                        when (s) {
-                            Screen.EARTH_HOME -> NowScreen(
-                                vm = vm,
-                                mode = AppMode.EARTH,
-                                strings = strings,
-                                contentPadding = pad,
-                                onOpenGraphs = { push(Screen.EARTH_GRAPHS) },
-                                onOpenEvents = { push(Screen.EARTH_EVENTS) }
-                            )
-
-                            Screen.SUN_HOME -> SunScreen(
-                                strings = strings,
-                                contentPadding = pad,
-                                onOpenFull = { url, title ->
-                                    push(Screen.FULL(url, title))
-                                }
-                            )
-
-                            Screen.SETTINGS ->
-                                SettingsScreen(strings, pad, lang, {
-                                    lang = it
-                                    store.setLanguage(it)
-                                }) { pop() }
-
-                            Screen.TUTORIAL ->
-                                TutorialScreen(strings, pad) { pop() }
-
-                            is Screen.FULL ->
-                                FullscreenWebImageScreen(
-                                    s.url,
-                                    s.title,
-                                    strings,
-                                    pad
-                                ) { pop() }
-
-                            else -> {}
+                        IconButton(onClick = { push(Screen.SETTINGS) }) {
+                            Icon(Icons.Default.Settings, contentDescription = null)
                         }
                     }
+                )
+            }
+        ) { pad ->
+            AnimatedContent(
+                targetState = current,
+                transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(160)) },
+                label = "nav"
+            ) { s ->
+                when (s) {
+                    Screen.EARTH_HOME -> NowScreen(
+                        vm = vm,
+                        mode = AppMode.EARTH,
+                        strings = strings,
+                        contentPadding = pad,
+                        onOpenGraphs = { push(Screen.EARTH_GRAPHS) },
+                        onOpenEvents = { push(Screen.EARTH_EVENTS) }
+                    )
+
+                    Screen.SUN_HOME -> SunScreen(
+                        strings = strings,
+                        contentPadding = pad,
+                        onOpenFull = { url, title -> push(Screen.FULL(url, title)) }
+                    )
+
+                    Screen.EARTH_GRAPHS -> GraphsHostScreen(
+                        vm = vm,
+                        strings = strings,
+                        contentPadding = pad,
+                        onClose = { pop() }
+                    )
+
+                    Screen.EARTH_EVENTS -> EventsScreen(
+                        vm = vm,
+                        strings = strings,
+                        contentPadding = pad,
+                        onClose = { pop() }
+                    )
+
+                    Screen.SETTINGS -> SettingsScreen(
+                        strings = strings,
+                        contentPadding = pad,
+                        currentLang = lang,
+                        onLangChange = {
+                            lang = it
+                            store.setLanguage(it)
+                        },
+                        onClose = { pop() }
+                    )
+
+                    Screen.TUTORIAL -> TutorialScreen(
+                        strings = strings,
+                        contentPadding = pad,
+                        onClose = { pop() }
+                    )
+
+                    is Screen.FULL -> FullscreenWebImageScreen(
+                        url = s.url,
+                        title = s.title,
+                        strings = strings,
+                        contentPadding = pad,
+                        onClose = { pop() }
+                    )
                 }
             }
         }
