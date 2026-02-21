@@ -15,7 +15,8 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wittyapp.net.SpaceWeatherApi
 import com.example.wittyapp.ui.SpaceWeatherViewModel
@@ -152,5 +153,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+}
+
+/* ---------- Simple ViewModel Factory ---------- */
+
+class SimpleFactory<T : ViewModel>(
+    private val creator: () -> T
+) : ViewModelProvider.Factory {
+
+    override fun <T2 : ViewModel> create(modelClass: Class<T2>): T2 {
+        @Suppress("UNCHECKED_CAST")
+        return creator() as T2
     }
 }
