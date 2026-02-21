@@ -1,14 +1,15 @@
 package com.example.wittyapp
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -24,6 +25,7 @@ import com.example.wittyapp.ui.screens.EventsScreen
 import com.example.wittyapp.ui.screens.GraphsScreen
 import com.example.wittyapp.ui.screens.NowScreen
 import com.example.wittyapp.ui.theme.CosmosTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -36,58 +38,88 @@ class MainActivity : ComponentActivity() {
             val vm: SpaceWeatherViewModel =
                 viewModel(factory = SimpleFactory { SpaceWeatherViewModel(api) })
 
-            var screen by remember { mutableStateOf(Screen.NOW) }
+            // Стек экранов (инфраструктура "назад")
+            var stack by remember { mutableStateOf(listOf(Screen.NOW)) }
+
+            fun push(s: Screen) { stack = stack + s }
+            fun pop(): Boolean {
+                return if (stack.size > 1) {
+                    stack = stack.dropLast(1)
+                    true
+                } else false
+            }
+            fun setRoot(s: Screen) { stack = listOf(s) }
+
+            val current = stack.last()
+
+            val snackbarHostState = remember { SnackbarHostState() }
+            val scope = rememberCoroutineScope()
+            var lastBackAt by remember { mutableStateOf(0L) }
+
+            BackHandler {
+                // 1) если есть куда вернуться — возвращаемся
+                if (pop()) return@BackHandler
+
+                // 2) иначе — двойной назад для выхода
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastBackAt < 1800L) {
+                    finish()
+                } else {
+                    lastBackAt = now
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Нажмите НАЗАД ещё раз для выхода",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
+            }
 
             CosmosTheme(auroraScore = vm.state.auroraScore) {
                 Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
                     bottomBar = {
                         NavigationBar {
                             NavigationBarItem(
-                                selected = screen == Screen.NOW,
-                                onClick = { screen = Screen.NOW },
+                                selected = current == Screen.NOW,
+                                onClick = { setRoot(Screen.NOW) },
                                 icon = { Icon(Icons.Default.WbSunny, contentDescription = null) },
                                 label = { Text("Сейчас") }
                             )
                             NavigationBarItem(
-                                selected = screen == Screen.GRAPHS,
-                                onClick = { screen = Screen.GRAPHS },
+                                selected = current == Screen.GRAPHS,
+                                onClick = { setRoot(Screen.GRAPHS) },
                                 icon = { Icon(Icons.Default.ShowChart, contentDescription = null) },
                                 label = { Text("Графики") }
                             )
                             NavigationBarItem(
-                                selected = screen == Screen.EVENTS,
-                                onClick = { screen = Screen.EVENTS },
+                                selected = current == Screen.EVENTS,
+                                onClick = { setRoot(Screen.EVENTS) },
                                 icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
                                 label = { Text("События") }
                             )
                         }
                     }
-                ) { pad ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(Modifier)
-                    ) {
-                        // AnimatedContent даст плавные переходы без navigation-compose
-                        AnimatedContent(
-                            targetState = screen,
-                            transitionSpec = {
-                                fadeIn(tween(220)) togetherWith fadeOut(tween(220))
-                            },
-                            label = "screen"
-                        ) { s ->
-                            when (s) {
-                                Screen.NOW -> NowScreen(
-                                    vm = vm,
-                                    onOpenGraphs = { screen = Screen.GRAPHS }
-                                )
-                                Screen.GRAPHS -> GraphsScreen(
-                                    title = "Графики (24ч)",
-                                    series = vm.simpleGraphSeries(),
-                                    onClose = { screen = Screen.NOW }
-                                )
-                                Screen.EVENTS -> EventsScreen(vm)
-                            }
+                ) { _ ->
+                    AnimatedContent(
+                        targetState = current,
+                        transitionSpec = {
+                            fadeIn(tween(200)) togetherWith fadeOut(tween(200))
+                        },
+                        label = "screen"
+                    ) { s ->
+                        when (s) {
+                            Screen.NOW -> NowScreen(
+                                vm = vm,
+                                onOpenGraphs = { setRoot(Screen.GRAPHS) }
+                            )
+                            Screen.GRAPHS -> GraphsScreen(
+                                title = "Графики (24ч)",
+                                series = vm.simpleGraphSeries(),
+                                onClose = { setRoot(Screen.NOW) }
+                            )
+                            Screen.EVENTS -> EventsScreen(vm)
                         }
                     }
                 }
