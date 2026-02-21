@@ -1,6 +1,7 @@
 package com.example.wittyapp.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -8,6 +9,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
+import com.example.wittyapp.ui.GraphSeries
+import com.example.wittyapp.ui.GraphsScreen
 import com.example.wittyapp.ui.SpaceWeatherViewModel
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -16,12 +19,37 @@ import java.time.format.DateTimeFormatter
 fun NowScreen(vm: SpaceWeatherViewModel) {
     val s = vm.state
 
+    var showGraphs by remember { mutableStateOf(false) }
+
+    val glow by animateColorAsState(
+        targetValue = when {
+            s.auroraScore >= 85 -> MaterialTheme.colorScheme.tertiaryContainer
+            s.auroraScore >= 70 -> MaterialTheme.colorScheme.secondaryContainer
+            else -> MaterialTheme.colorScheme.surfaceVariant
+        },
+        label = "glow"
+    )
+
     val bg = Brush.verticalGradient(
         listOf(
             MaterialTheme.colorScheme.surface,
-            MaterialTheme.colorScheme.surfaceVariant
+            glow
         )
     )
+
+    if (showGraphs) {
+        GraphsScreen(
+            title = "Графики",
+            subtitle = "последние 24 часа",
+            series = listOf(
+                GraphSeries("Kp", "0..9", s.kp24),
+                GraphSeries("Bz (нТ)", "ниже 0 — лучше", s.bz24),
+                GraphSeries("Скорость (км/с)", "солнечный ветер", s.speed24)
+            ),
+            onClose = { showGraphs = false }
+        )
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -33,7 +61,8 @@ fun NowScreen(vm: SpaceWeatherViewModel) {
             title = "Сейчас",
             subtitle = s.updatedAt?.let { fmtInstant(it) },
             loading = s.loading,
-            onRefresh = { vm.refresh() }
+            onRefresh = { vm.refresh() },
+            onGraphs = { showGraphs = true }
         )
 
         s.error?.let { ErrorCard(it) }
@@ -50,7 +79,10 @@ fun NowScreen(vm: SpaceWeatherViewModel) {
             MetricCard(
                 title = "Bz (нТ)",
                 value = s.bzNow?.let { "%.1f".format(it) } ?: "—",
-                hint = s.bz3hAvg?.let { "3ч: %.1f".format(it) } ?: "3ч: —",
+                hint = buildString {
+                    append(s.bz3hAvg?.let { "3ч: %.1f".format(it) } ?: "3ч: —")
+                    s.fracBzNegative3h?.let { append(" | Bz<0: ${"%.0f".format(it * 100)}%") }
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -72,24 +104,31 @@ fun NowScreen(vm: SpaceWeatherViewModel) {
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Как читать показатели", style = MaterialTheme.typography.titleMedium)
-                Text("• Kp — общий уровень возмущений. Чем выше, тем лучше шанс сияний.", style = MaterialTheme.typography.bodyMedium)
-                Text("• Bz < 0 (особенно долго) — хороший знак для сияний.", style = MaterialTheme.typography.bodyMedium)
-                Text("• Высокая скорость и плотность усиливают эффект.", style = MaterialTheme.typography.bodyMedium)
+                Text("Как читается прогноз", style = MaterialTheme.typography.titleMedium)
+                Text("• Мы смотрим последние 3 часа: Kp + Bz + скорость + плотность.", style = MaterialTheme.typography.bodyMedium)
+                Text("• Важнее всего: Bz < 0 и насколько долго он держится.", style = MaterialTheme.typography.bodyMedium)
+                Text("• Это эвристика. В v4 можно добавить более «научную» калибровку.", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
 }
 
 @Composable
-private fun Header(title: String, subtitle: String?, loading: Boolean, onRefresh: () -> Unit) {
+private fun Header(
+    title: String,
+    subtitle: String?,
+    loading: Boolean,
+    onRefresh: () -> Unit,
+    onGraphs: () -> Unit
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
             Text(title, style = MaterialTheme.typography.headlineSmall)
             Text(subtitle ?: "—", style = MaterialTheme.typography.bodySmall)
         }
-        Button(onClick = onRefresh, enabled = !loading) {
-            Text(if (loading) "..." else "Обновить")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onGraphs) { Text("Графики") }
+            Button(onClick = onRefresh, enabled = !loading) { Text(if (loading) "..." else "Обновить") }
         }
     }
 }
@@ -119,9 +158,7 @@ private fun AuroraCard(score: Int, title: String, details: String) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Прогноз сияний (3 часа)", style = MaterialTheme.typography.titleLarge)
             Text(title, style = MaterialTheme.typography.titleMedium)
-
             LinearProgressIndicator(progress = { anim })
-
             Text(details, style = MaterialTheme.typography.bodySmall)
         }
     }
