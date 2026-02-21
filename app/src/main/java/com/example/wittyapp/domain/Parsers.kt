@@ -1,44 +1,76 @@
 package com.example.wittyapp.domain
 
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.*
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
-data class KpNow(val timeTag: String, val kp: Double)
+data class KpSample(val time: Instant, val kp: Double)
+data class PlasmaSample(val time: Instant, val speedKmS: Double?, val densityCC: Double?)
+data class MagSample(val time: Instant, val bzNt: Double?)
 
-fun parseKpNow(raw: JsonElement): KpNow? {
-    val arr = raw as? JsonArray ?: return null
-    if (arr.size < 2) return null
+fun parseKpSeries(raw: JsonElement): List<KpSample> {
+    val arr = raw as? JsonArray ?: return emptyList()
+    if (arr.size < 2) return emptyList()
 
-    val last = arr.lastOrNull() as? JsonArray ?: return null
-    val time = last.getOrNull(0)?.jsonPrimitive?.contentOrNull ?: return null
-    val kp = last.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return null
-
-    return KpNow(timeTag = time, kp = kp)
+    // Пропускаем header
+    return arr.drop(1).mapNotNull { row ->
+        val r = row as? JsonArray ?: return@mapNotNull null
+        val time = r.getOrNull(0)?.jsonPrimitive?.contentOrNull?.let(::parseSwpcTime) ?: return@mapNotNull null
+        val kp = r.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+        KpSample(time, kp)
+    }
 }
 
-fun parsePlasmaNow(raw: JsonElement): Pair<String, Pair<Double?, Double?>>? {
-    val arr = raw as? JsonArray ?: return null
-    if (arr.size < 2) return null
+fun parsePlasmaSeries(raw: JsonElement): List<PlasmaSample> {
+    val arr = raw as? JsonArray ?: return emptyList()
+    if (arr.size < 2) return emptyList()
 
-    val last = arr.lastOrNull() as? JsonArray ?: return null
-    val time = last.getOrNull(0)?.jsonPrimitive?.contentOrNull ?: return null
+    return arr.drop(1).mapNotNull { row ->
+        val r = row as? JsonArray ?: return@mapNotNull null
+        val time = r.getOrNull(0)?.jsonPrimitive?.contentOrNull?.let(::parseSwpcTime) ?: return@mapNotNull null
 
-    val density = last.getOrNull(1)?.jsonPrimitive?.doubleOrNull
-    val speed = last.getOrNull(2)?.jsonPrimitive?.doubleOrNull
+        // Обычно: [time_tag, density, speed, ...]
+        val density = r.getOrNull(1)?.jsonPrimitive?.doubleOrNull
+        val speed = r.getOrNull(2)?.jsonPrimitive?.doubleOrNull
 
-    return time to (speed to density)
+        PlasmaSample(time, speedKmS = speed, densityCC = density)
+    }
 }
 
-fun parseMagBzNow(raw: JsonElement): Pair<String, Double?>? {
-    val arr = raw as? JsonArray ?: return null
-    if (arr.size < 2) return null
+fun parseMagSeries(raw: JsonElement): List<MagSample> {
+    val arr = raw as? JsonArray ?: return emptyList()
+    if (arr.size < 2) return emptyList()
 
-    val last = arr.lastOrNull() as? JsonArray ?: return null
-    val time = last.getOrNull(0)?.jsonPrimitive?.contentOrNull ?: return null
+    return arr.drop(1).mapNotNull { row ->
+        val r = row as? JsonArray ?: return@mapNotNull null
+        val time = r.getOrNull(0)?.jsonPrimitive?.contentOrNull?.let(::parseSwpcTime) ?: return@mapNotNull null
 
-    val bz = last.getOrNull(3)?.jsonPrimitive?.doubleOrNull
-    return time to bz
+        // Часто: [time_tag, bx, by, bz, bt...]
+        val bz = r.getOrNull(3)?.jsonPrimitive?.doubleOrNull
+        MagSample(time, bzNt = bz)
+    }
+}
+
+/**
+ * SWPC часто отдаёт time_tag как:
+ * "yyyy-MM-dd HH:mm:ss.SSS" или "yyyy-MM-dd HH:mm:ss"
+ * Иногда уже ISO-8601.
+ * Для простоты считаем время как UTC.
+ */
+private fun parseSwpcTime(s: String): Instant? {
+    // ISO
+    runCatching { return Instant.parse(s) }.getOrNull()
+
+    val patterns = listOf(
+        "yyyy-MM-dd HH:mm:ss.SSS",
+        "yyyy-MM-dd HH:mm:ss"
+    )
+    for (p in patterns) {
+        val fmt = DateTimeFormatter.ofPattern(p)
+        val dt = runCatching { LocalDateTime.parse(s, fmt) }.getOrNull()
+        if (dt != null) return dt.toInstant(ZoneOffset.UTC)
+    }
+    return null
 }
