@@ -13,14 +13,33 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wittyapp.net.SpaceWeatherApi
 import com.example.wittyapp.ui.SpaceWeatherViewModel
-import com.example.wittyapp.ui.screens.*
+import com.example.wittyapp.ui.screens.EventsScreen
+import com.example.wittyapp.ui.screens.FullscreenWebImageScreen
+import com.example.wittyapp.ui.screens.GraphsScreen
+import com.example.wittyapp.ui.screens.SunScreen
+import com.example.wittyapp.ui.screens.NowScreen
+import com.example.wittyapp.ui.screens.SettingsScreen
+import com.example.wittyapp.ui.screens.TutorialScreen
 import com.example.wittyapp.ui.settings.SettingsStore
 import com.example.wittyapp.ui.strings.AppStrings
 import com.example.wittyapp.ui.theme.CosmosTheme
@@ -35,7 +54,7 @@ class MainActivity : ComponentActivity() {
         val api = SpaceWeatherApi()
 
         setContent {
-            AppRoot(api = api)
+            AppRoot(api)
         }
     }
 }
@@ -46,7 +65,8 @@ private fun AppRoot(api: SpaceWeatherApi) {
     val vm: SpaceWeatherViewModel =
         viewModel(factory = SimpleFactory { SpaceWeatherViewModel(api) })
 
-    val store = remember { SettingsStore(LocalContext.current) }
+    val ctx = LocalContext.current
+    val store = remember { SettingsStore(ctx) }
 
     var lang by remember { mutableStateOf(store.getLanguage()) }
     val strings = remember(lang) { AppStrings(lang) }
@@ -70,8 +90,7 @@ private fun AppRoot(api: SpaceWeatherApi) {
         if (pop()) return@BackHandler
         val now = SystemClock.elapsedRealtime()
         if (now - lastBackAt < 1800L) {
-            // закрыть приложение
-            (LocalContext.current as? ComponentActivity)?.finish()
+            (ctx as? ComponentActivity)?.finish()
         } else {
             lastBackAt = now
             scope.launch { snackbarHostState.showSnackbar(strings.exitHint) }
@@ -85,10 +104,7 @@ private fun AppRoot(api: SpaceWeatherApi) {
                 TopAppBar(
                     title = {
                         Text(
-                            if (mode == AppMode.EARTH)
-                                strings.titleEarth
-                            else
-                                strings.titleSun
+                            if (mode == AppMode.EARTH) strings.titleEarth else strings.titleSun
                         )
                     },
                     actions = {
@@ -133,12 +149,16 @@ private fun AppRoot(api: SpaceWeatherApi) {
                         onOpenFull = { url, title -> push(Screen.FULL(url, title)) }
                     )
 
-                    Screen.EARTH_GRAPHS -> GraphsHostScreen(
-                        vm = vm,
-                        strings = strings,
-                        contentPadding = pad,
-                        onClose = { pop() }
-                    )
+                    Screen.EARTH_GRAPHS -> {
+                        // ВАЖНО: это твой GraphsScreen. Если сигнатура отличается — скажи, я подгоню.
+                        GraphsScreen(
+                            title = strings.graphsTitle24h,
+                            series = vm.build24hSeries(strings),
+                            mode = com.example.wittyapp.ui.screens.GraphsMode.EARTH,
+                            strings = strings,
+                            onClose = { pop() }
+                        )
+                    }
 
                     Screen.EARTH_EVENTS -> EventsScreen(
                         vm = vm,
@@ -147,16 +167,19 @@ private fun AppRoot(api: SpaceWeatherApi) {
                         onClose = { pop() }
                     )
 
-                    Screen.SETTINGS -> SettingsScreen(
-                        strings = strings,
-                        contentPadding = pad,
-                        currentLang = lang,
-                        onLangChange = {
-                            lang = it
-                            store.setLanguage(it)
-                        },
-                        onClose = { pop() }
-                    )
+                    Screen.SETTINGS -> {
+                        // Если у твоего SettingsScreen другие имена параметров — поменяй ТОЛЬКО этот блок.
+                        SettingsScreen(
+                            strings = strings,
+                            contentPadding = pad,
+                            language = lang,
+                            onLanguageChange = {
+                                lang = it
+                                store.setLanguage(it)
+                            },
+                            onClose = { pop() }
+                        )
+                    }
 
                     Screen.TUTORIAL -> TutorialScreen(
                         strings = strings,
