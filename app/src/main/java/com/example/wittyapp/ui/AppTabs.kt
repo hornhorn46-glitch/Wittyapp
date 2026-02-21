@@ -2,9 +2,24 @@ package com.example.wittyapp.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -25,27 +40,33 @@ fun AppTabs(
                     selected = tab == Tab.NOW,
                     onClick = { tab = Tab.NOW },
                     label = { Text("Сейчас") },
-                    icon = { Icon(Icons.Default.Speed, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.Speed, contentDescription = null) }
                 )
                 NavigationBarItem(
                     selected = tab == Tab.AURORA,
                     onClick = { tab = Tab.AURORA },
                     label = { Text("Сияния") },
-                    icon = { Icon(Icons.Default.Public, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.Public, contentDescription = null) }
                 )
                 NavigationBarItem(
                     selected = tab == Tab.EVENTS,
                     onClick = { tab = Tab.EVENTS },
                     label = { Text("События") },
-                    icon = { Icon(Icons.Default.List, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.List, contentDescription = null) }
                 )
             }
         }
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pad)
+                .padding(16.dp)
+        ) {
             AnimatedContent(
                 targetState = tab,
-                transitionSpec = { tween(220) togetherWith tween(220) }
+                transitionSpec = { tween(220) togetherWith tween(220) },
+                label = "tabs"
             ) { t ->
                 when (t) {
                     Tab.NOW -> now()
@@ -54,14 +75,5 @@ fun AppTabs(
                 }
             }
         }
-    }
-}
-
-// Минимальные иконки (Material Icons)
-private object Icons {
-    object Default {
-        @Composable fun Speed() = androidx.compose.material.icons.Icons.Default.Speed
-        @Composable fun Public() = androidx.compose.material.icons.Icons.Default.Public
-        @Composable fun List() = androidx.compose.material.icons.Icons.Default.List
     }
 }
