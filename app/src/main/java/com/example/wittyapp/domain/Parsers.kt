@@ -1,202 +1,154 @@
 package com.example.wittyapp.domain
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 
-private val JSON = Json {
-    ignoreUnknownKeys = true
-    isLenient = true
+// ===== Models for 1-minute feeds =====
+
+data class KpSample(
+    val t: Instant,
+    val kp: Double
+)
+
+data class WindSample(
+    val t: Instant,
+    val speed: Double,
+    val density: Double?
+)
+
+data class MagSample(
+    val t: Instant,
+    val bx: Double?,
+    val bz: Double?,
+    val bt: Double?
+)
+
+// ===== Public API used by ViewModel =====
+
+/**
+ * NOAA SWPC Kp 1-minute (пример по твоему скрину):
+ * [
+ *  {"time_tag":"2026-02-21T09:28:00","kp_index":2,"estimated_kp":1.67,"kp":"2M"},
+ *  ...
+ * ]
+ */
+fun parseKp1m(body: String): List<KpSample> {
+    val arr = parseRootArray(body) ?: return emptyList()
+    return arr.mapNotNull { e ->
+        val o = e.asObj() ?: return@mapNotNull null
+        val t = o["time_tag"].asString()?.let(::parseInstantSafe) ?: return@mapNotNull null
+
+        // Берём estimated_kp (плавное), если нет — kp_index (целое)
+        val kp = o["estimated_kp"].asDouble()
+            ?: o["kp_index"].asDouble()
+            ?: return@mapNotNull null
+
+        KpSample(t = t, kp = kp)
+    }.sortedBy { it.t }
 }
 
 /**
- * Parsers for various space weather endpoints.
- * Important: this file provides legacy function names used by SpaceWeatherViewModel:
- *  - parseKp1m
- *  - parseWind1m
- *  - parseMag1m
- *
- * And also "now" helpers:
- *  - parseKpNow
- *  - parsePlasmaNow
- *  - parseMagNow
+ * NOAA SWPC Solar Wind 1-minute (пример по твоему скрину):
+ * [
+ *  {"time_tag":"2026-02-21T15:25:00","active":true,"source":"ACE",
+ *   "proton_speed":492.6,"proton_density":6.30, ...},
+ *  ...
+ * ]
  */
-object Parsers {
+fun parseWind1m(body: String): List<WindSample> {
+    val arr = parseRootArray(body) ?: return emptyList()
+    return arr.mapNotNull { e ->
+        val o = e.asObj() ?: return@mapNotNull null
+        val t = o["time_tag"].asString()?.let(::parseInstantSafe) ?: return@mapNotNull null
 
-    /* ---------------- Legacy API expected by ViewModel ---------------- */
+        val speed = o["proton_speed"].asDouble() ?: return@mapNotNull null
+        val density = o["proton_density"].asDouble()
 
-    fun parseKp1m(raw: String): Double? = parseKpNow(raw)
+        WindSample(t = t, speed = speed, density = density)
+    }.sortedBy { it.t }
+}
 
-    /** Returns Pair(speed, density) */
-    fun parseWind1m(raw: String): Pair<Double?, Double?> = parsePlasmaNow(raw)
+/**
+ * NOAA SWPC MAG 1-minute (пример по твоему скрину):
+ * [
+ *  {"time_tag":"2026-02-21T15:24:00","bt":11.77,"bx_gse":4.15,"bz_gse":10.04,
+ *   "bx_gsm":4.12,"bz_gsm":8.29, ...},
+ *  ...
+ * ]
+ *
+ * Для компаса логичнее брать GSM (если есть), иначе GSE.
+ */
+fun parseMag1m(body: String): List<MagSample> {
+    val arr = parseRootArray(body) ?: return emptyList()
+    return arr.mapNotNull { e ->
+        val o = e.asObj() ?: return@mapNotNull null
+        val t = o["time_tag"].asString()?.let(::parseInstantSafe) ?: return@mapNotNull null
 
-    /** Returns Pair(bz, bx) */
-    fun parseMag1m(raw: String): Pair<Double?, Double?> = parseMagNow(raw)
+        val bt = o["bt"].asDouble()
 
-    /* ---------------- Current helpers ---------------- */
+        val bx = o["bx_gsm"].asDouble() ?: o["bx_gse"].asDouble()
+        val bz = o["bz_gsm"].asDouble() ?: o["bz_gse"].asDouble()
 
-    /** Kp "now" single value (best effort) */
-    fun parseKpNow(raw: String): Double? {
-        val root = JSON.parseToJsonElement(raw)
+        MagSample(t = t, bx = bx, bz = bz, bt = bt)
+    }.sortedBy { it.t }
+}
 
-        // case 1: object with direct fields
-        obj(root)?.let { o ->
-            dbl(o, "kp")?.let { return it }
-            dbl(o, "kp_index")?.let { return it }
-            dbl(o, "value")?.let { return it }
+// ===== Helpers =====
+
+private val json = Json {
+    ignoreUnknownKeys = true
+    isLenient = true
+    explicitNulls = false
+}
+
+/**
+ * Поддержка:
+ * - корень = JSON Array (как у тебя сейчас)
+ * - корень = JSON Object с полем data/result/values (на будущее)
+ */
+private fun parseRootArray(body: String): JsonArray? {
+    val el = runCatching { json.parseToJsonElement(body) }.getOrNull() ?: return null
+    return when (el) {
+        is JsonArray -> el
+        is JsonObject -> {
+            // fallback: если когда-то источник станет объектом
+            el["data"]?.asArr()
+                ?: el["result"]?.asArr()
+                ?: el["values"]?.asArr()
         }
-
-        // case 2: array -> take last row
-        val arr = asArrayOrNull(root) ?: return null
-        val last = arr.lastOrNull() ?: return null
-        return extractDoubleFromRow(last, keys = listOf("kp", "kp_index", "value", "Kp"))
-    }
-
-    /** Solar wind "now": speed + density */
-    fun parsePlasmaNow(raw: String): Pair<Double?, Double?> {
-        val root = JSON.parseToJsonElement(raw)
-
-        obj(root)?.let { o ->
-            val speed = dbl(o, "speed") ?: dbl(o, "wind_speed") ?: dbl(o, "v")
-            val dens = dbl(o, "density") ?: dbl(o, "rho") ?: dbl(o, "n")
-            if (speed != null || dens != null) return speed to dens
-        }
-
-        val arr = asArrayOrNull(root) ?: return null to null
-        val last = arr.lastOrNull() ?: return null to null
-        val speed = extractDoubleFromRow(last, listOf("speed", "wind_speed", "v", "value"))
-        val dens = extractDoubleFromRow(last, listOf("density", "rho", "n"))
-        return speed to dens
-    }
-
-    /** Magnetometer "now": bz + bx (best effort) */
-    fun parseMagNow(raw: String): Pair<Double?, Double?> {
-        val root = JSON.parseToJsonElement(raw)
-
-        obj(root)?.let { o ->
-            val bz = dbl(o, "bz") ?: dbl(o, "Bz") ?: dbl(o, "btz") ?: dbl(o, "z")
-            val bx = dbl(o, "bx") ?: dbl(o, "Bx") ?: dbl(o, "btx") ?: dbl(o, "x")
-            if (bz != null || bx != null) return bz to bx
-        }
-
-        val arr = asArrayOrNull(root) ?: return null to null
-        val last = arr.lastOrNull() ?: return null to null
-        val bz = extractDoubleFromRow(last, listOf("bz", "Bz", "btz", "z"))
-        val bx = extractDoubleFromRow(last, listOf("bx", "Bx", "btx", "x"))
-        return bz to bx
-    }
-
-    /**
-     * 24h series parser.
-     * Return: list of pairs (Instant, value).
-     */
-    fun parseSeries24h(raw: String, valueKeys: List<String>): List<Pair<Instant, Double>> {
-        val root = JSON.parseToJsonElement(raw)
-        val arr = asArrayOrNull(root) ?: return emptyList()
-
-        val out = mutableListOf<Pair<Instant, Double>>()
-        for (row in arr) {
-            val t = extractInstantFromRow(row) ?: continue
-            val v = extractDoubleFromRow(row, valueKeys) ?: continue
-            out += t to v
-        }
-        return out
-    }
-
-    /* ---------------- Robust JSON wrappers ---------------- */
-
-    private fun asArrayOrNull(root: JsonElement?): JsonArray? {
-        if (root == null || root is JsonNull) return null
-        return when (root) {
-            is JsonArray -> root
-            is JsonObject -> {
-                val keys = listOf(
-                    "data", "values", "result", "records", "items", "list",
-                    "Data", "Values", "Result"
-                )
-                for (k in keys) {
-                    val v = root[k]
-                    if (v is JsonArray) return v
-                }
-                // nested
-                for (k in keys) {
-                    val v = root[k]
-                    if (v is JsonObject) {
-                        for (k2 in keys) {
-                            val v2 = v[k2]
-                            if (v2 is JsonArray) return v2
-                        }
-                    }
-                }
-                null
-            }
-            else -> null
-        }
-    }
-
-    private fun obj(root: JsonElement?): JsonObject? =
-        runCatching { root?.jsonObject }.getOrNull()
-
-    private fun dbl(obj: JsonObject?, key: String): Double? =
-        runCatching { obj?.get(key)?.jsonPrimitive?.content?.toDoubleOrNull() }.getOrNull()
-
-    /* ---------------- row extraction ---------------- */
-
-    private fun extractInstantFromRow(row: JsonElement): Instant? {
-        // array row: [time, value]
-        if (isArrayRow(row)) {
-            val a = row.jsonArray
-            val t0 = a.getOrNull(0)?.jsonPrimitive?.contentOrNull()
-            return parseInstant(t0)
-        }
-
-        val o = row.jsonObjectOrNull() ?: return null
-        val candidates = listOf("time_tag", "time", "timestamp", "date", "datetime", "t")
-        for (k in candidates) {
-            val s = o[k]?.jsonPrimitive?.contentOrNull()
-            parseInstant(s)?.let { return it }
-        }
-        val ms = candidates.asSequence()
-            .mapNotNull { o[it]?.jsonPrimitive?.contentOrNull()?.toLongOrNull() }
-            .firstOrNull()
-        return if (ms != null) Instant.ofEpochMilli(ms) else null
-    }
-
-    private fun extractDoubleFromRow(row: JsonElement, keys: List<String>): Double? {
-        if (isArrayRow(row)) {
-            val a = row.jsonArray
-            return a.getOrNull(1)?.jsonPrimitive?.contentOrNull()?.toDoubleOrNull()
-        }
-        val o = row.jsonObjectOrNull() ?: return null
-        for (k in keys) {
-            o[k]?.jsonPrimitive?.contentOrNull()?.toDoubleOrNull()?.let { return it }
-        }
-        return null
-    }
-
-    private fun isArrayRow(e: JsonElement): Boolean =
-        runCatching { e.jsonArray; true }.getOrDefault(false)
-
-    private fun JsonElement.jsonObjectOrNull() =
-        runCatching { this.jsonObject }.getOrNull()
-
-    private fun kotlinx.serialization.json.JsonPrimitive.contentOrNull(): String? =
-        runCatching { this.content }.getOrNull()
-
-    private fun parseInstant(s: String?): Instant? {
-        if (s.isNullOrBlank()) return null
-        runCatching { return Instant.parse(s) }.getOrNull()
-
-        val n = s.toLongOrNull()
-        if (n != null) {
-            return if (n > 3_000_000_000L) Instant.ofEpochMilli(n) else Instant.ofEpochSecond(n)
-        }
-        return null
+        else -> null
     }
 }
+
+private fun JsonElement.asObj(): JsonObject? = (this as? JsonObject)
+private fun JsonElement.asArr(): JsonArray? = (this as? JsonArray)
+
+private fun JsonElement?.asString(): String? {
+    val p = this as? JsonPrimitive ?: return null
+    if (p is JsonNull) return null
+    return runCatching { p.content }.getOrNull()
+}
+
+private fun JsonElement?.asDouble(): Double? {
+    val p = this as? JsonPrimitive ?: return null
+    if (p is JsonNull) return null
+    // В этих фидах числа могут быть как number или как string
+    return p.doubleOrNullSafe()
+}
+
+private fun JsonPrimitive.doubleOrNullSafe(): Double? {
+    // contentOrNull/doubleOrNull иногда отсутствуют в старых заготовках — делаем вручную
+    val raw = runCatching { this.content }.getOrNull() ?: return null
+    return raw.toDoubleOrNull()
+}
+
+private fun parseInstantSafe(s: String): Instant =
+    runCatching { Instant.parse(s) }.getOrElse { Instant.now() }
