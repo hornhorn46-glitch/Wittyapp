@@ -56,6 +56,7 @@ class SpaceWeatherViewModel(
     fun refresh() {
         viewModelScope.launch {
             state = state.copy(loading = true, error = null)
+
             try {
                 val kpDef = async { api.fetchKp() }
                 val plasmaDef = async { api.fetchSolarWindPlasma1d() }
@@ -73,7 +74,10 @@ class SpaceWeatherViewModel(
                 val magSeries = parseMagSeries(magRaw)
 
                 val kpNow = kpSeries.lastOrNull()?.kp
-                val kp3hAvg = kpSeries.filter { it.time >= from }.map { it.kp }.averageOrNull()
+                val kp3hAvg = kpSeries
+                    .filter { it.time >= from }
+                    .map { it.kp as Double? }
+                    .avgOrNull()
 
                 val plasmaNow = plasmaSeries.lastOrNull()
                 val magNow = magSeries.lastOrNull()
@@ -82,9 +86,20 @@ class SpaceWeatherViewModel(
                 val densityNow = plasmaNow?.densityCC
                 val bzNow = magNow?.bzNt
 
-                val speed3hAvg = plasmaSeries.filter { it.time >= from }.mapNotNull { it.speedKmS }.averageOrNull()
-                val density3hAvg = plasmaSeries.filter { it.time >= from }.mapNotNull { it.densityCC }.averageOrNull()
-                val bz3hAvg = magSeries.filter { it.time >= from }.mapNotNull { it.bzNt }.averageOrNull()
+                val speed3hAvg = plasmaSeries
+                    .filter { it.time >= from }
+                    .map { it.speedKmS }
+                    .avgOrNull()
+
+                val density3hAvg = plasmaSeries
+                    .filter { it.time >= from }
+                    .map { it.densityCC }
+                    .avgOrNull()
+
+                val bz3hAvg = magSeries
+                    .filter { it.time >= from }
+                    .map { it.bzNt }
+                    .avgOrNull()
 
                 val prediction = predictAurora(
                     kpNow = kpNow,
@@ -121,8 +136,12 @@ class SpaceWeatherViewModel(
 
                     events = events
                 )
+
             } catch (t: Throwable) {
-                state = state.copy(loading = false, error = t.message ?: "Ошибка загрузки")
+                state = state.copy(
+                    loading = false,
+                    error = t.message ?: "Ошибка загрузки"
+                )
             }
         }
     }
@@ -143,9 +162,12 @@ class SpaceWeatherViewModel(
         val startStr = start.toString()
         val endStr = end.toString()
 
-        val cme = runCatching { api.fetchDonkiCme(startStr, endStr) }.getOrDefault(JsonArray(emptyList()))
-        val flr = runCatching { api.fetchDonkiFlares(startStr, endStr) }.getOrDefault(JsonArray(emptyList()))
-        val gst = runCatching { api.fetchDonkiGeomagneticStorm(startStr, endStr) }.getOrDefault(JsonArray(emptyList()))
+        val cme = runCatching { api.fetchDonkiCme(startStr, endStr) }
+            .getOrDefault(JsonArray(emptyList()))
+        val flr = runCatching { api.fetchDonkiFlares(startStr, endStr) }
+            .getOrDefault(JsonArray(emptyList()))
+        val gst = runCatching { api.fetchDonkiGeomagneticStorm(startStr, endStr) }
+            .getOrDefault(JsonArray(emptyList()))
 
         return buildList {
             addAll(cme.mapNotNull { it.toDonkiEvent("CME") })
@@ -178,8 +200,10 @@ private fun JsonElement.toDonkiEvent(type: String): DonkiEvent? {
     return DonkiEvent(type = type, title = title, timeTag = time, note = note)
 }
 
-private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else average()
-private fun List<Double?>.averageOrNull(): Double? {
-    val v = filterNotNull()
+/**
+ * Универсальное среднее для nullable значений.
+ */
+private fun Iterable<Double?>.avgOrNull(): Double? {
+    val v = this.filterNotNull()
     return if (v.isEmpty()) null else v.average()
 }
