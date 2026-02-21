@@ -1,9 +1,16 @@
 package com.example.wittyapp.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
-import androidx.compose.material3.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -76,6 +83,8 @@ fun GraphsScreen(
                     }
                 }
             }
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -119,7 +128,6 @@ private fun LineChart(
             return (h - pad) - (y - minY) / dy * (h - 2 * pad)
         }
 
-        // сетка
         val gridN = 4
         for (i in 0..gridN) {
             val yy = pad + i * (h - 2 * pad) / gridN
@@ -144,7 +152,6 @@ private fun LineChart(
             style = Stroke(width = 4f)
         )
 
-        // последняя точка
         points.lastOrNull()?.let { last ->
             drawCircle(
                 color = pointColor,
