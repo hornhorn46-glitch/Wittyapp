@@ -1,99 +1,135 @@
 package com.example.wittyapp.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import com.example.wittyapp.domain.*
-import com.example.wittyapp.net.SpaceWeatherApi
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonElement
+import com.example.wittyapp.ui.SpaceWeatherViewModel
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
-fun NowScreen(api: SpaceWeatherApi) {
-    val scope = rememberCoroutineScope()
+fun NowScreen(vm: SpaceWeatherViewModel) {
+    val s = vm.state
 
-    var kpRaw by remember { mutableStateOf<JsonElement?>(null) }
-    var plasmaRaw by remember { mutableStateOf<JsonElement?>(null) }
-    var magRaw by remember { mutableStateOf<JsonElement?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var loading by remember { mutableStateOf(false) }
+    val bg = Brush.verticalGradient(
+        listOf(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceVariant
+        )
+    )
 
-    fun refresh() {
-        scope.launch {
-            loading = true
-            error = null
-            try {
-                kpRaw = api.fetchKp()
-                plasmaRaw = api.fetchSolarWindPlasma1d()
-                magRaw = api.fetchSolarWindMag1d()
-            } catch (t: Throwable) {
-                error = t.message ?: "Ошибка загрузки"
-            } finally {
-                loading = false
-            }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bg),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Header(
+            title = "Сейчас",
+            subtitle = s.updatedAt?.let { fmtInstant(it) },
+            loading = s.loading,
+            onRefresh = { vm.refresh() }
+        )
+
+        s.error?.let { ErrorCard(it) }
+
+        AuroraCard(score = s.auroraScore, title = s.auroraTitle, details = s.auroraDetails)
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            MetricCard(
+                title = "Kp",
+                value = s.kpNow?.let { "%.1f".format(it) } ?: "—",
+                hint = s.kp3hAvg?.let { "3ч: %.1f".format(it) } ?: "3ч: —",
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                title = "Bz (нТ)",
+                value = s.bzNow?.let { "%.1f".format(it) } ?: "—",
+                hint = s.bz3hAvg?.let { "3ч: %.1f".format(it) } ?: "3ч: —",
+                modifier = Modifier.weight(1f)
+            )
         }
-    }
 
-    LaunchedEffect(Unit) { refresh() }
-
-    val kp = kpRaw?.let(::parseKpNow)
-    val plasma = plasmaRaw?.let(::parsePlasmaNow)
-    val bz = magRaw?.let(::parseMagBzNow)
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Космическая погода", style = MaterialTheme.typography.headlineSmall)
-            TextButton(onClick = { refresh() }, enabled = !loading) { Text("Обновить") }
-        }
-
-        if (error != null) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                Text(error!!, modifier = Modifier.padding(12.dp))
-            }
-        }
-
-        Card {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Kp сейчас", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = kp?.kp?.toString() ?: "—",
-                    style = MaterialTheme.typography.displaySmall
-                )
-                Text(
-                    text = kp?.let { "Время: ${it.timeTag}" } ?: "Время: —",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = kp?.kp?.let { kpLabel(it) } ?: "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            MetricCard(
+                title = "Скорость (км/с)",
+                value = s.speedNow?.let { "%.0f".format(it) } ?: "—",
+                hint = s.speed3hAvg?.let { "3ч: %.0f".format(it) } ?: "3ч: —",
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                title = "Плотность (1/см³)",
+                value = s.densityNow?.let { "%.1f".format(it) } ?: "—",
+                hint = s.density3hAvg?.let { "3ч: %.1f".format(it) } ?: "3ч: —",
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Солнечный ветер", style = MaterialTheme.typography.titleMedium)
-                val speed = plasma?.second?.first
-                val dens = plasma?.second?.second
-                Text("Скорость: ${speed?.let { "%.0f".format(it) } ?: "—"} км/с")
-                Text("Плотность: ${dens?.let { "%.1f".format(it) } ?: "—"} 1/см³")
-                Text("Bz: ${bz?.second?.let { "%.1f".format(it) } ?: "—"} нТ")
-                Text(
-                    text = "Отрицательный Bz повышает шанс возмущений (если держится).",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text("Как читать показатели", style = MaterialTheme.typography.titleMedium)
+                Text("• Kp — общий уровень возмущений. Чем выше, тем лучше шанс сияний.", style = MaterialTheme.typography.bodyMedium)
+                Text("• Bz < 0 (особенно долго) — хороший знак для сияний.", style = MaterialTheme.typography.bodyMedium)
+                Text("• Высокая скорость и плотность усиливают эффект.", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
 }
 
-private fun kpLabel(kp: Double): String = when {
-    kp < 3 -> "Тихо"
-    kp < 5 -> "Возбуждённо"
-    kp < 6 -> "Слабая буря"
-    kp < 7 -> "Умеренная буря"
-    kp < 8 -> "Сильная буря"
-    else -> "Экстремально"
+@Composable
+private fun Header(title: String, subtitle: String?, loading: Boolean, onRefresh: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Column {
+            Text(title, style = MaterialTheme.typography.headlineSmall)
+            Text(subtitle ?: "—", style = MaterialTheme.typography.bodySmall)
+        }
+        Button(onClick = onRefresh, enabled = !loading) {
+            Text(if (loading) "..." else "Обновить")
+        }
+    }
+}
+
+@Composable
+private fun ErrorCard(text: String) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+        Text(text, modifier = Modifier.padding(12.dp))
+    }
+}
+
+@Composable
+private fun MetricCard(title: String, value: String, hint: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.labelLarge)
+            Text(value, style = MaterialTheme.typography.displaySmall)
+            Text(hint, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun AuroraCard(score: Int, title: String, details: String) {
+    val anim by animateFloatAsState(targetValue = score / 100f, label = "score")
+    Card {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Прогноз сияний (3 часа)", style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleMedium)
+
+            LinearProgressIndicator(progress = { anim })
+
+            Text(details, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+private fun fmtInstant(i: java.time.Instant): String {
+    val z = ZoneId.systemDefault()
+    val dt = i.atZone(z).toLocalDateTime()
+    val f = DateTimeFormatter.ofPattern("dd.MM HH:mm")
+    return "обновлено: ${dt.format(f)}"
 }
