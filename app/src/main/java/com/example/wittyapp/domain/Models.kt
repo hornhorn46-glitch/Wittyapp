@@ -2,6 +2,11 @@ package com.example.wittyapp.domain
 
 import java.time.Instant
 
+data class GraphPoint(
+    val t: Instant,
+    val value: Double
+)
+
 data class KpSample(
     val t: Instant,
     val kp: Double
