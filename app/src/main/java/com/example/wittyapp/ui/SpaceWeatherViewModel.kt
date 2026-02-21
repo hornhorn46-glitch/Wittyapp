@@ -58,9 +58,46 @@ class SpaceWeatherViewModel(
                 val windBody = api.wind1mJson()
                 val magBody = api.mag1mJson()
 
-                val kp = parseKp1m(kpBody)
-                val wind = parseWind1m(windBody)
-                val mag = parseMag1m(magBody)
+                // Быстрые проверки "это вообще JSON?"
+                val maybeHtml =
+                    kpBody.trimStart().startsWith("<") ||
+                    windBody.trimStart().startsWith("<") ||
+                    magBody.trimStart().startsWith("<")
+
+                if (maybeHtml) {
+                    state = state.copy(
+                        loading = false,
+                        updatedAt = Instant.now(),
+                        error = buildString {
+                            appendLine("Похоже, сервер вернул HTML, а не JSON.")
+                            appendLine("kp head: ${kpBody.head()}")
+                            appendLine("wind head: ${windBody.head()}")
+                            appendLine("mag head: ${magBody.head()}")
+                        }
+                    )
+                    return@launch
+                }
+
+                val kp = runCatching { parseKp1m(kpBody) }.getOrElse { emptyList() }
+                val wind = runCatching { parseWind1m(windBody) }.getOrElse { emptyList() }
+                val mag = runCatching { parseMag1m(magBody) }.getOrElse { emptyList() }
+
+                // Если парсинг вернул пусто — покажем диагностический кусок ответа
+                if (kp.isEmpty() && wind.isEmpty() && mag.isEmpty()) {
+                    state = state.copy(
+                        loading = false,
+                        updatedAt = Instant.now(),
+                        error = buildString {
+                            appendLine("Данные не распознаны (парсер вернул пусто).")
+                            appendLine("Нужно подогнать парсеры под реальный формат API.")
+                            appendLine()
+                            appendLine("kp head: ${kpBody.head()}")
+                            appendLine("wind head: ${windBody.head()}")
+                            appendLine("mag head: ${magBody.head()}")
+                        }
+                    )
+                    return@launch
+                }
 
                 val now = Instant.now()
 
@@ -78,11 +115,20 @@ class SpaceWeatherViewModel(
                 val since24h = now.minus(24, ChronoUnit.HOURS)
                 val kp24 = kp.filter { it.t.isAfter(since24h) }.map { GraphPoint(it.t, it.kp) }
                 val sp24 = wind.filter { it.t.isAfter(since24h) }.map { GraphPoint(it.t, it.speed) }
-                val bz24 = mag.filter { it.t.isAfter(since24h) }.mapNotNull { s -> s.bz?.let { GraphPoint(s.t, it) } }
+                val bz24 = mag.filter { it.t.isAfter(since24h) }
+                    .mapNotNull { s -> s.bz?.let { GraphPoint(s.t, it) } }
+
+                // Если частично пусто — тоже покажем мягкое предупреждение в error (не блокируем UI)
+                val warn = buildString {
+                    if (kp.isEmpty()) appendLine("⚠ kp пусто (парсер/источник). kp head: ${kpBody.head()}")
+                    if (wind.isEmpty()) appendLine("⚠ wind пусто (парсер/источник). wind head: ${windBody.head()}")
+                    if (mag.isEmpty()) appendLine("⚠ mag пусто (парсер/источник). mag head: ${magBody.head()}")
+                }.trim().ifBlank { null }
 
                 state = state.copy(
                     loading = false,
                     updatedAt = now,
+                    error = warn,
                     kpNow = kpNow,
                     speedNow = windNow?.speed,
                     densityNow = windNow?.density,
@@ -115,3 +161,9 @@ data class GraphSeries(
 )
 
 private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else average()
+
+private fun String.head(n: Int = 320): String =
+    this.replace("\n", " ")
+        .replace("\r", " ")
+        .trim()
+        .take(n)
