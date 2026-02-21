@@ -1,4 +1,5 @@
 package com.example.wittyapp.ui.screens
+import com.example.wittyapp.domain.GraphPoint
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
