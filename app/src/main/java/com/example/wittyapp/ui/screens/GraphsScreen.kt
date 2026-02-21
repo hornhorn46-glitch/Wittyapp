@@ -15,8 +15,6 @@ import androidx.compose.ui.unit.dp
 import com.example.wittyapp.ui.strings.AppStrings
 import kotlin.math.roundToInt
 
-data class GraphPoint(val xLabel: String, val value: Double)
-
 data class GraphSeries(
     val title: String,
     val unit: String,
