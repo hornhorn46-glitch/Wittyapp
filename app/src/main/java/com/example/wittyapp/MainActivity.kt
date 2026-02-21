@@ -1,5 +1,8 @@
 package com.example.wittyapp
-
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShowChart
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
