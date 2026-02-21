@@ -1,26 +1,18 @@
 package com.example.wittyapp.ui.components
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -36,83 +28,121 @@ fun SpeedometerGauge(
     dangerThreshold: Float? = null,
     modifier: Modifier = Modifier
 ) {
-    val t = ((value - minValue) / (maxValue - minValue)).coerceIn(0f, 1f)
-    val anim = animateFloatAsState(t, label = "gauge").value
+    val v = value.coerceIn(minValue, maxValue)
+    val t = ((v - minValue) / (maxValue - minValue)).coerceIn(0f, 1f)
 
-    val base = Color.White.copy(alpha = 0.16f)
-    val track = Color.White.copy(alpha = 0.10f)
-    val accent = MaterialTheme.colorScheme.primary
-
-    // цвет стрелки/дуги по порогам (без "тяжёлых" текстур)
-    val vColor = when {
-        dangerThreshold != null && value >= dangerThreshold -> Color(0xFFFF5252)
-        warnThreshold != null && value >= warnThreshold -> Color(0xFFFFB300)
-        else -> accent
+    val needleColor = when {
+        dangerThreshold != null && v >= dangerThreshold -> Color(0xFFFF5252)
+        warnThreshold != null && v >= warnThreshold -> Color(0xFFFFB74D)
+        else -> Color(0xFF34E7B3)
     }
 
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.size(150.dp)) {
-                val w = size.width
-                val h = size.height
-                val r = min(w, h) * 0.42f
-                val c = Offset(w / 2f, h / 2f)
-                val start = 160f
-                val sweep = 220f
-                val strokeW = 14f
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val c = Offset(w / 2f, h / 2f)
+            val r = min(w, h) * 0.40f
 
-                // "корпус" + лёгкая тень
-                drawCircle(Color.Black.copy(alpha = 0.22f), radius = r * 1.18f, center = c + Offset(2f, 2f))
-                drawCircle(base, radius = r * 1.18f, center = c)
+            // дуга спидометра: 210°..-30° (как обычно)
+            val startDeg = 210f
+            val sweepDeg = 240f
 
-                // трек
-                drawArc(
-                    color = track,
-                    startAngle = start,
-                    sweepAngle = sweep,
-                    useCenter = false,
-                    style = Stroke(strokeW, cap = StrokeCap.Round),
-                    topLeft = Offset(c.x - r, c.y - r),
-                    size = androidx.compose.ui.geometry.Size(r * 2, r * 2)
-                )
+            // фон-дуга
+            drawArc(
+                color = Color.White.copy(alpha = 0.10f),
+                startAngle = startDeg,
+                sweepAngle = sweepDeg,
+                useCenter = false,
+                topLeft = Offset(c.x - r, c.y - r),
+                size = androidx.compose.ui.geometry.Size(r * 2, r * 2),
+                style = Stroke(width = 18f, cap = StrokeCap.Round)
+            )
 
-                // заполнение — градиентом
-                val grad = Brush.linearGradient(
-                    colors = listOf(vColor.copy(alpha = 0.65f), vColor),
-                    start = Offset(c.x - r, c.y - r),
-                    end = Offset(c.x + r, c.y + r)
-                )
-                drawArc(
-                    brush = grad,
-                    startAngle = start,
-                    sweepAngle = sweep * anim,
-                    useCenter = false,
-                    style = Stroke(strokeW, cap = StrokeCap.Round),
-                    topLeft = Offset(c.x - r, c.y - r),
-                    size = androidx.compose.ui.geometry.Size(r * 2, r * 2)
-                )
+            // активная дуга
+            drawArc(
+                color = needleColor.copy(alpha = 0.95f),
+                startAngle = startDeg,
+                sweepAngle = sweepDeg * t,
+                useCenter = false,
+                topLeft = Offset(c.x - r, c.y - r),
+                size = androidx.compose.ui.geometry.Size(r * 2, r * 2),
+                style = Stroke(width = 18f, cap = StrokeCap.Round)
+            )
 
-                // стрелка
-                val a = (start + sweep * anim) * (PI / 180f)
-                val p0 = Offset(c.x + cos(a).toFloat() * (r * 0.05f), c.y + sin(a).toFloat() * (r * 0.05f))
-                val p1 = Offset(c.x + cos(a).toFloat() * (r * 0.95f), c.y + sin(a).toFloat() * (r * 0.95f))
-                drawLine(Color.Black.copy(alpha = 0.25f), p0 + Offset(1f, 1f), p1 + Offset(1f, 1f), strokeWidth = 6f, cap = StrokeCap.Round)
-                drawLine(vColor, p0, p1, strokeWidth = 6f, cap = StrokeCap.Round)
+            // стрелка
+            val ang = Math.toRadians((startDeg + sweepDeg * t).toDouble())
+            val p = Offset(
+                c.x + cos(ang).toFloat() * (r * 0.92f),
+                c.y + sin(ang).toFloat() * (r * 0.92f)
+            )
 
-                // центр
-                drawCircle(Color.Black.copy(alpha = 0.25f), radius = r * 0.12f, center = c + Offset(1f, 1f))
-                drawCircle(Color.White.copy(alpha = 0.85f), radius = r * 0.12f, center = c)
-            }
+            drawLine(
+                color = Color.Black.copy(alpha = 0.25f),
+                start = c + Offset(2f, 2f),
+                end = p + Offset(2f, 2f),
+                strokeWidth = 10f,
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = needleColor,
+                start = c,
+                end = p,
+                strokeWidth = 10f,
+                cap = StrokeCap.Round
+            )
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(title, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.9f))
+            // центр
+            drawCircle(Color.White.copy(alpha = 0.92f), radius = 10f, center = c)
+        }
+
+        // ТЕКСТ — ОПУСКАЕМ ВНИЗ
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            Spacer(Modifier.height(42.dp))
+
+            Text(
+                title,
+                color = Color.White.copy(alpha = 0.92f),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(18.dp))
+
+            // значение опускаем ниже центра
+            val valueStr = formatValue(value)
+            Text(
+                text = valueStr,
+                color = Color.White,
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.offset(y = 10.dp),
+                textAlign = TextAlign.Center
+            )
+
+            if (unit.isNotBlank()) {
                 Text(
-                    text = "${value.toInt()} $unit",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
+                    text = unit,
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.offset(y = 8.dp),
                     textAlign = TextAlign.Center
                 )
             }
         }
     }
+}
+
+private fun formatValue(v: Float): String {
+    // если почти целое — без дробей
+    val iv = v.toInt()
+    return if (kotlin.math.abs(v - iv.toFloat()) < 0.05f) iv.toString() else String.format("%.1f", v)
 }
