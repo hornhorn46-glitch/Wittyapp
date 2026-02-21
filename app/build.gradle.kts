@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.wittyapp"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {
@@ -29,7 +29,6 @@ android {
         compose = true
     }
 
-    // ВАЖНО: существующая версия Compose compiler (исправляет "compiler:1.6.0 not found")
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
@@ -59,11 +58,17 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
+    // Навигация между экранами (кнопки будут "вести")
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+
+    // Сохранение прогресса
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Чтобы существовала тема Theme.Material3.DayNight.NoActionBar из AndroidManifest.xml
+    // XML-тема Theme.Material3.DayNight.NoActionBar из AndroidManifest.xml
     implementation("com.google.android.material:material:1.12.0")
 }
