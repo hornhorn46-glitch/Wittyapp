@@ -1,24 +1,37 @@
 package com.example.wittyapp.domain
 
 import kotlinx.serialization.json.*
+import java.time.Instant
 
-fun parseKpNow(json: String): Double? {
+fun parseKp1m(json: String): List<KpSample> {
     val arr = Json.parseToJsonElement(json).jsonArray
-    return arr.lastOrNull()?.jsonArray?.getOrNull(1)?.jsonPrimitive?.doubleOrNull
+    return arr.drop(1).mapNotNull {
+        val row = it.jsonArray
+        val t = row[0].jsonPrimitive.contentOrNull ?: return@mapNotNull null
+        val kp = row[1].jsonPrimitive.doubleOrNull ?: return@mapNotNull null
+        KpSample(Instant.parse(t), kp)
+    }
 }
 
-fun parsePlasmaNow(json: String): Triple<Double?, Double?, Double?> {
+fun parseWind1m(json: String): List<WindSample> {
     val arr = Json.parseToJsonElement(json).jsonArray
-    val last = arr.lastOrNull()?.jsonArray ?: return Triple(null, null, null)
-
-    val speed = last.getOrNull(1)?.jsonPrimitive?.doubleOrNull
-    val density = last.getOrNull(2)?.jsonPrimitive?.doubleOrNull
-    val temp = last.getOrNull(3)?.jsonPrimitive?.doubleOrNull
-
-    return Triple(speed, density, temp)
+    return arr.drop(1).mapNotNull {
+        val row = it.jsonArray
+        val t = row[0].jsonPrimitive.contentOrNull ?: return@mapNotNull null
+        val speed = row[1].jsonPrimitive.doubleOrNull ?: return@mapNotNull null
+        val density = row[2].jsonPrimitive.doubleOrNull
+        WindSample(Instant.parse(t), speed, density)
+    }
 }
 
-fun parseMagBzNow(json: String): Double? {
+fun parseMag1m(json: String): List<MagSample> {
     val arr = Json.parseToJsonElement(json).jsonArray
-    return arr.lastOrNull()?.jsonArray?.getOrNull(2)?.jsonPrimitive?.doubleOrNull
+    return arr.drop(1).mapNotNull {
+        val row = it.jsonArray
+        val t = row[0].jsonPrimitive.contentOrNull ?: return@mapNotNull null
+        val bx = row[1].jsonPrimitive.doubleOrNull
+        val by = row[2].jsonPrimitive.doubleOrNull
+        val bz = row[3].jsonPrimitive.doubleOrNull
+        MagSample(Instant.parse(t), bx, by, bz)
+    }
 }
