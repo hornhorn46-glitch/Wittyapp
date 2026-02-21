@@ -1,5 +1,4 @@
 package com.example.wittyapp.ui.screens
-import com.example.wittyapp.domain.GraphPoint
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -14,12 +13,20 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import com.example.wittyapp.ui.strings.AppStrings
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+
+// ✅ UI модель
+data class UiGraphPoint(
+    val xLabel: String,
+    val value: Double
+)
 
 data class GraphSeries(
     val title: String,
     val unit: String,
-    val points: List<GraphPoint>,
+    val points: List<UiGraphPoint>,
     val minY: Double,
     val maxY: Double,
     val gridStepY: Double,
@@ -51,7 +58,12 @@ fun GraphsScreen(
 
         series.forEach { s ->
             Card {
-                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("${s.title} (${s.unit})", style = MaterialTheme.typography.titleMedium)
                     GraphCanvas(series = s)
                 }
@@ -64,16 +76,20 @@ fun GraphsScreen(
 
 @Composable
 private fun GraphCanvas(series: GraphSeries) {
+
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        .withZone(ZoneId.systemDefault())
+
     val gridColor = Color.White.copy(alpha = 0.10f)
     val axisColor = Color.White.copy(alpha = 0.25f)
     val lineColor = MaterialTheme.colorScheme.primary
-    val dangerColor = Color.Red.copy(alpha = 0.20f)
 
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
     ) {
+
         val leftPad = 54f
         val rightPad = 18f
         val topPad = 10f
@@ -82,8 +98,8 @@ private fun GraphCanvas(series: GraphSeries) {
         val w = size.width
         val h = size.height
 
-        val plotW = (w - leftPad - rightPad).coerceAtLeast(1f)
-        val plotH = (h - topPad - bottomPad).coerceAtLeast(1f)
+        val plotW = (w - leftPad - rightPad)
+        val plotH = (h - topPad - bottomPad)
 
         fun x(i: Int): Float {
             val n = (series.points.size - 1).coerceAtLeast(1)
@@ -91,54 +107,39 @@ private fun GraphCanvas(series: GraphSeries) {
         }
 
         fun y(v: Double): Float {
-            val t = ((v - series.minY) / (series.maxY - series.minY)).toFloat().coerceIn(0f, 1f)
+            val t = ((v - series.minY) / (series.maxY - series.minY))
+                .toFloat()
+                .coerceIn(0f, 1f)
             return topPad + (1f - t) * plotH
         }
 
-        // Danger zones
-        series.dangerBelow?.let { thr ->
-            val yy = y(thr)
-            drawRect(dangerColor, topLeft = Offset(leftPad, yy), size = androidx.compose.ui.geometry.Size(plotW, h - bottomPad - yy))
-        }
-        series.dangerAbove?.let { thr ->
-            val yy = y(thr)
-            drawRect(dangerColor, topLeft = Offset(leftPad, topPad), size = androidx.compose.ui.geometry.Size(plotW, yy - topPad))
-        }
-
-        // Horizontal grid
+        // grid
         var gy = series.minY
         while (gy <= series.maxY + 1e-9) {
             val yy = y(gy)
-            drawLine(gridColor, Offset(leftPad, yy), Offset(w - rightPad, yy), strokeWidth = 1f)
+            drawLine(gridColor, Offset(leftPad, yy), Offset(w - rightPad, yy))
             gy += series.gridStepY
         }
 
-        // Vertical grid (пример: 6 линий)
         val vLines = 6
         for (i in 0..vLines) {
-            val xx = leftPad + (i.toFloat() / vLines.toFloat()) * plotW
-            drawLine(gridColor, Offset(xx, topPad), Offset(xx, h - bottomPad), strokeWidth = 1f)
+            val xx = leftPad + (i.toFloat() / vLines) * plotW
+            drawLine(gridColor, Offset(xx, topPad), Offset(xx, h - bottomPad))
         }
 
-        // Axis
-        drawLine(axisColor, Offset(leftPad, topPad), Offset(leftPad, h - bottomPad), strokeWidth = 2f)
-        drawLine(axisColor, Offset(leftPad, h - bottomPad), Offset(w - rightPad, h - bottomPad), strokeWidth = 2f)
-
-        // Line
+        // line
         if (series.points.size >= 2) {
             for (i in 0 until series.points.size - 1) {
-                val p0 = series.points[i]
-                val p1 = series.points[i + 1]
                 drawLine(
                     lineColor,
-                    Offset(x(i), y(p0.value)),
-                    Offset(x(i + 1), y(p1.value)),
+                    Offset(x(i), y(series.points[i].value)),
+                    Offset(x(i + 1), y(series.points[i + 1].value)),
                     strokeWidth = 3f
                 )
             }
         }
 
-        // Labels using native canvas (not composable)
+        // labels
         drawIntoCanvas { canvas ->
             val paint = android.graphics.Paint().apply {
                 isAntiAlias = true
@@ -146,23 +147,26 @@ private fun GraphCanvas(series: GraphSeries) {
                 textSize = 24f
             }
 
-            // Y labels (min/mid/max)
             fun drawYLabel(v: Double) {
-                val yy = y(v)
-                val txt = v.roundToInt().toString()
-                canvas.nativeCanvas.drawText(txt, 6f, yy + 8f, paint)
+                canvas.nativeCanvas.drawText(
+                    v.roundToInt().toString(),
+                    6f,
+                    y(v) + 8f,
+                    paint
+                )
             }
 
             drawYLabel(series.minY)
-            drawYLabel((series.minY + series.maxY) / 2.0)
+            drawYLabel((series.minY + series.maxY) / 2)
             drawYLabel(series.maxY)
 
-            // X labels: first / mid / last
             if (series.points.isNotEmpty()) {
                 paint.textSize = 22f
+
                 val first = series.points.first().xLabel
                 val mid = series.points[series.points.size / 2].xLabel
                 val last = series.points.last().xLabel
+
                 canvas.nativeCanvas.drawText(first, leftPad, h - 6f, paint)
                 canvas.nativeCanvas.drawText(mid, leftPad + plotW * 0.45f, h - 6f, paint)
                 canvas.nativeCanvas.drawText(last, leftPad + plotW * 0.82f, h - 6f, paint)
