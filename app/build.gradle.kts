@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.wittyapp"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -52,19 +52,21 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
-    // Интернет/JSON
+    // ИКОНКИ (чинит Public/Speed/List)
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // Ktor + JSON
     implementation("io.ktor:ktor-client-okhttp:2.3.12")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-    // Картинки (сияния/карты)
+    // Картинки (aurora forecast)
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     // XML-тема из манифеста
     implementation("com.google.android.material:material:1.12.0")
 
-    // tooling/test
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
