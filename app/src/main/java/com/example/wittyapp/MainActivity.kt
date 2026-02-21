@@ -36,9 +36,9 @@ import com.example.wittyapp.ui.SpaceWeatherViewModel
 import com.example.wittyapp.ui.screens.EventsScreen
 import com.example.wittyapp.ui.screens.FullscreenWebImageScreen
 import com.example.wittyapp.ui.screens.GraphsScreen
-import com.example.wittyapp.ui.screens.SunScreen
 import com.example.wittyapp.ui.screens.NowScreen
 import com.example.wittyapp.ui.screens.SettingsScreen
+import com.example.wittyapp.ui.screens.SunScreen
 import com.example.wittyapp.ui.screens.TutorialScreen
 import com.example.wittyapp.ui.settings.SettingsStore
 import com.example.wittyapp.ui.strings.AppStrings
@@ -50,7 +50,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val api = SpaceWeatherApi()
 
         setContent {
@@ -103,9 +102,7 @@ private fun AppRoot(api: SpaceWeatherApi) {
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            if (mode == AppMode.EARTH) strings.titleEarth else strings.titleSun
-                        )
+                        Text(if (mode == AppMode.EARTH) strings.titleEarth else strings.titleSun)
                     },
                     actions = {
                         IconButton(onClick = { push(Screen.TUTORIAL) }) {
@@ -149,16 +146,12 @@ private fun AppRoot(api: SpaceWeatherApi) {
                         onOpenFull = { url, title -> push(Screen.FULL(url, title)) }
                     )
 
-                    Screen.EARTH_GRAPHS -> {
-                        // ВАЖНО: это твой GraphsScreen. Если сигнатура отличается — скажи, я подгоню.
-                        GraphsScreen(
-                            title = strings.graphsTitle24h,
-                            series = vm.build24hSeries(strings),
-                            mode = com.example.wittyapp.ui.screens.GraphsMode.EARTH,
-                            strings = strings,
-                            onClose = { pop() }
-                        )
-                    }
+                    Screen.EARTH_GRAPHS -> GraphsScreen(
+                        vm = vm,
+                        strings = strings,
+                        contentPadding = pad,
+                        onClose = { pop() }
+                    )
 
                     Screen.EARTH_EVENTS -> EventsScreen(
                         vm = vm,
@@ -167,19 +160,16 @@ private fun AppRoot(api: SpaceWeatherApi) {
                         onClose = { pop() }
                     )
 
-                    Screen.SETTINGS -> {
-                        // Если у твоего SettingsScreen другие имена параметров — поменяй ТОЛЬКО этот блок.
-                        SettingsScreen(
-                            strings = strings,
-                            contentPadding = pad,
-                            language = lang,
-                            onLanguageChange = {
-                                lang = it
-                                store.setLanguage(it)
-                            },
-                            onClose = { pop() }
-                        )
-                    }
+                    Screen.SETTINGS -> SettingsScreen(
+                        strings = strings,
+                        contentPadding = pad,
+                        currentLanguage = lang,
+                        onSetLanguage = {
+                            lang = it
+                            store.setLanguage(it)
+                        },
+                        onClose = { pop() }
+                    )
 
                     Screen.TUTORIAL -> TutorialScreen(
                         strings = strings,
