@@ -7,79 +7,103 @@ data class AuroraPrediction(
 )
 
 /**
- * Эвристика (v2):
- * - Kp (сейчас + среднее за 3 часа)
- * - Bz (сейчас + среднее за 3 часа): отрицательный Bz сильно повышает шанс
- * - скорость/плотность солнечного ветра
+ * v3: точнее за счёт:
+ * - fracBzNegative3h: доля времени (0..1), когда Bz < 0 за 3 часа
+ * - bzMin3h: минимум Bz за 3 часа (самый отрицательный)
  */
-fun predictAurora(
+fun predictAuroraV3(
     kpNow: Double?,
     kp3hAvg: Double?,
     bzNow: Double?,
     bz3hAvg: Double?,
+    bzMin3h: Double?,
+    fracBzNegative3h: Double?,
     speedNow: Double?,
     speed3hAvg: Double?,
     densityNow: Double?,
     density3hAvg: Double?
 ): AuroraPrediction {
 
-    val kp = kpNow ?: kp3hAvg ?: 0.0
-    val kpAvg = kp3hAvg ?: kp
+    val kpAvg = kp3hAvg ?: (kpNow ?: 0.0)
+    val kpCur = kpNow ?: kpAvg
 
-    val bz = bzNow ?: bz3hAvg
+    val bzCur = bzNow ?: bz3hAvg
     val bzAvg = bz3hAvg
+    val bzMin = bzMin3h
 
-    val speed = speedNow ?: speed3hAvg
-    val speedAvg = speed3hAvg
+    val speedAvg = speed3hAvg ?: speedNow
+    val speedCur = speedNow ?: speedAvg
 
-    val dens = densityNow ?: density3hAvg
-    val densAvg = density3hAvg
+    val densAvg = density3hAvg ?: densityNow
+    val densCur = densityNow ?: densAvg
 
     var score = 0.0
 
-    // Kp — базовая сила геомагнитной активности
+    // Kp — базовая активность
     score += when {
         kpAvg < 2.5 -> 5.0
-        kpAvg < 4.0 -> 20.0
-        kpAvg < 5.0 -> 35.0
-        kpAvg < 6.0 -> 55.0
-        kpAvg < 7.0 -> 72.0
-        kpAvg < 8.0 -> 85.0
-        else -> 95.0
+        kpAvg < 4.0 -> 22.0
+        kpAvg < 5.0 -> 38.0
+        kpAvg < 6.0 -> 58.0
+        kpAvg < 7.0 -> 74.0
+        kpAvg < 8.0 -> 87.0
+        else -> 96.0
     }
 
-    // Bz — ключ к “впуску” энергии в магнитосферу
-    if (bz != null) {
+    // Bz: текущий знак/уровень
+    if (bzCur != null) {
         score += when {
-            bz <= -10 -> 25.0
-            bz <= -6 -> 18.0
-            bz <= -3 -> 10.0
-            bz < 0 -> 6.0
+            bzCur <= -10 -> 24.0
+            bzCur <= -6 -> 17.0
+            bzCur <= -3 -> 9.0
+            bzCur < 0 -> 5.0
             else -> -8.0
         }
     }
 
+    // Bz: среднее (устойчивость)
     if (bzAvg != null) {
         score += when {
-            bzAvg <= -6 -> 10.0
-            bzAvg <= -3 -> 6.0
-            bzAvg < 0 -> 3.0
+            bzAvg <= -6 -> 9.0
+            bzAvg <= -3 -> 5.0
+            bzAvg < 0 -> 2.0
             else -> -4.0
+        }
+    }
+
+    // Bz: минимум (пики “минуса”)
+    if (bzMin != null) {
+        score += when {
+            bzMin <= -15 -> 8.0
+            bzMin <= -10 -> 6.0
+            bzMin <= -6 -> 4.0
+            else -> 0.0
+        }
+    }
+
+    // Доля времени с Bz<0 за 3ч (самое ценное улучшение)
+    if (fracBzNegative3h != null) {
+        score += when {
+            fracBzNegative3h >= 0.85 -> 10.0
+            fracBzNegative3h >= 0.65 -> 7.0
+            fracBzNegative3h >= 0.45 -> 4.0
+            fracBzNegative3h >= 0.25 -> 2.0
+            else -> -2.0
         }
     }
 
     // Скорость
     if (speedAvg != null) {
         score += when {
-            speedAvg >= 750 -> 15.0
-            speedAvg >= 650 -> 10.0
-            speedAvg >= 550 -> 6.0
+            speedAvg >= 750 -> 14.0
+            speedAvg >= 650 -> 9.0
+            speedAvg >= 550 -> 5.0
             speedAvg >= 450 -> 2.0
             else -> 0.0
         }
     }
 
-    // Плотность — слабее влияет, но помогает
+    // Плотность
     if (densAvg != null) {
         score += when {
             densAvg >= 20 -> 6.0
@@ -89,7 +113,6 @@ fun predictAurora(
         }
     }
 
-    // Нормализация
     score = score.coerceIn(0.0, 100.0)
     val s = score.toInt()
 
@@ -102,17 +125,19 @@ fun predictAurora(
     }
 
     val details = buildString {
-        append("За последние 3 часа: ")
-        append("Kp≈${kpAvg.format1()}, ")
-        append("Bz≈${bzAvg?.format1() ?: "—"} нТ, ")
-        append("V≈${speedAvg?.format0() ?: "—"} км/с, ")
-        append("n≈${densAvg?.format1() ?: "—"}.\n")
+        append("За 3 часа: ")
+        append("Kp≈${kpAvg.f1()}, ")
+        append("Bz≈${bzAvg?.f1() ?: "—"} нТ, ")
+        append("min Bz=${bzMin?.f1() ?: "—"} нТ, ")
+        append("Bz<0: ${(fracBzNegative3h?.times(100))?.f0() ?: "—"}%, ")
+        append("V≈${speedAvg?.f0() ?: "—"} км/с, ")
+        append("n≈${densAvg?.f1() ?: "—"}.\n")
 
         append("Сейчас: ")
-        append("Kp=${kp.format1()}, ")
-        append("Bz=${bz?.format1() ?: "—"} нТ, ")
-        append("V=${speed?.format0() ?: "—"} км/с, ")
-        append("n=${dens?.format1() ?: "—"}.\n")
+        append("Kp=${kpCur.f1()}, ")
+        append("Bz=${bzCur?.f1() ?: "—"} нТ, ")
+        append("V=${speedCur?.f0() ?: "—"} км/с, ")
+        append("n=${densCur?.f1() ?: "—"}.\n")
 
         append("Оценка: $s/100.")
     }
@@ -120,5 +145,5 @@ fun predictAurora(
     return AuroraPrediction(score = s, title = title, details = details)
 }
 
-private fun Double.format0(): String = String.format("%.0f", this)
-private fun Double.format1(): String = String.format("%.1f", this)
+private fun Double.f0(): String = String.format("%.0f", this)
+private fun Double.f1(): String = String.format("%.1f", this)
