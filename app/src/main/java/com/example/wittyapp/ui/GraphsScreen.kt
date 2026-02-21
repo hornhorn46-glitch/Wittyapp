@@ -2,15 +2,24 @@ package com.example.wittyapp.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.Column
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.example.wittyapp.domain.GraphPoint
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphsScreen(
     title: String,
@@ -21,10 +30,12 @@ fun GraphsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Column {
-                    Text(title)
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall)
-                }},
+                title = {
+                    Column {
+                        Text(title)
+                        Text(subtitle, style = MaterialTheme.typography.bodySmall)
+                    }
+                },
                 actions = { TextButton(onClick = onClose) { Text("Закрыть") } }
             )
         }
@@ -38,12 +49,30 @@ fun GraphsScreen(
         ) {
             series.forEach { s ->
                 Card {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(s.name, style = MaterialTheme.typography.titleMedium)
                             Text(s.hint, style = MaterialTheme.typography.bodySmall)
                         }
-                        LineChart(points = s.points, modifier = Modifier.fillMaxWidth().height(180.dp))
+
+                        val lineColor = MaterialTheme.colorScheme.primary
+                        val gridColor = MaterialTheme.colorScheme.outlineVariant
+                        val pointColor = MaterialTheme.colorScheme.tertiary
+
+                        LineChart(
+                            points = s.points,
+                            lineColor = lineColor,
+                            gridColor = gridColor,
+                            pointColor = pointColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                        )
                     }
                 }
             }
@@ -58,7 +87,13 @@ data class GraphSeries(
 )
 
 @Composable
-private fun LineChart(points: List<GraphPoint>, modifier: Modifier = Modifier) {
+private fun LineChart(
+    points: List<GraphPoint>,
+    lineColor: Color,
+    gridColor: Color,
+    pointColor: Color,
+    modifier: Modifier = Modifier
+) {
     if (points.size < 2) {
         Box(modifier) { Text("Недостаточно данных") }
         return
@@ -84,12 +119,12 @@ private fun LineChart(points: List<GraphPoint>, modifier: Modifier = Modifier) {
             return (h - pad) - (y - minY) / dy * (h - 2 * pad)
         }
 
-        // сетка (простая)
+        // сетка
         val gridN = 4
         for (i in 0..gridN) {
             val yy = pad + i * (h - 2 * pad) / gridN
             drawLine(
-                color = MaterialTheme.colorScheme.outlineVariant,
+                color = gridColor,
                 start = Offset(pad, yy),
                 end = Offset(w - pad, yy),
                 strokeWidth = 1f
@@ -105,14 +140,14 @@ private fun LineChart(points: List<GraphPoint>, modifier: Modifier = Modifier) {
 
         drawPath(
             path = path,
-            color = MaterialTheme.colorScheme.primary,
+            color = lineColor,
             style = Stroke(width = 4f)
         )
 
-        // точки
-        points.takeLast(1).firstOrNull()?.let { last ->
+        // последняя точка
+        points.lastOrNull()?.let { last ->
             drawCircle(
-                color = MaterialTheme.colorScheme.tertiary,
+                color = pointColor,
                 radius = 7f,
                 center = Offset(sx(last.x), sy(last.y))
             )
