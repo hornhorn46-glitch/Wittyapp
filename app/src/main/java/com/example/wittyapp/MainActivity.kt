@@ -3,13 +3,11 @@ package com.example.wittyapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wittyapp.net.SpaceWeatherApi
 import com.example.wittyapp.ui.SpaceWeatherViewModel
 import com.example.wittyapp.ui.screens.*
-import com.example.wittyapp.ui.strings.rememberAppStrings
 import com.example.wittyapp.ui.theme.CosmosTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,75 +15,60 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val api = SpaceWeatherApi()
-
         setContent {
+            AppRoot()
+        }
+    }
+}
 
-            var currentScreen by remember { mutableStateOf("now") }
-            var mode by remember { mutableStateOf(AppMode.EARTH) }
+@Composable
+private fun AppRoot() {
 
-            val strings = rememberAppStrings()
+    val api = remember { SpaceWeatherApi() }
+    val vm: SpaceWeatherViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return SpaceWeatherViewModel(api) as T
+            }
+        }
+    )
 
-            val vm: SpaceWeatherViewModel = viewModel(
-                factory = SpaceWeatherViewModelFactory(api)
-            )
+    var currentScreen by remember { mutableStateOf("now") }
+    var mode by remember { mutableStateOf(AppMode.EARTH) }
 
-            CosmosTheme(mode = mode) {
+    CosmosTheme(
+        mode = mode,
+        auroraScore = vm.state.auroraScore
+    ) {
 
-                Scaffold { padding ->
+        androidx.compose.material3.Scaffold { padding ->
 
-                    when (currentScreen) {
+            when (currentScreen) {
 
-                        "now" -> NowScreen(
-                            vm = vm,
-                            mode = mode,
-                            strings = strings,
-                            contentPadding = padding,
-                            onOpenGraphs = { currentScreen = "graphs" },
-                            onOpenEvents = { /* позже */ }
-                        )
+                "now" -> NowScreen(
+                    vm = vm,
+                    mode = mode,
+                    strings = com.example.wittyapp.ui.strings.AppStrings.ru(),
+                    contentPadding = padding,
+                    onOpenGraphs = { currentScreen = "graphs" },
+                    onOpenEvents = {}
+                )
 
-                        "graphs" -> {
+                "graphs" -> {
 
-                            val series = listOf(
-                                buildUiSeries(
-                                    title = "Kp",
-                                    unit = "",
-                                    points = vm.state.kpSeries24h,
-                                    minY = 0.0,
-                                    maxY = 9.0,
-                                    gridStep = 1.0
-                                ),
-                                buildUiSeries(
-                                    title = "Speed",
-                                    unit = "км/с",
-                                    points = vm.state.speedSeries24h,
-                                    minY = 300.0,
-                                    maxY = 1000.0,
-                                    gridStep = 100.0
-                                ),
-                                buildUiSeries(
-                                    title = "Bz",
-                                    unit = "нТл",
-                                    points = vm.state.bzSeries24h,
-                                    minY = -20.0,
-                                    maxY = 20.0,
-                                    gridStep = 5.0
-                                )
-                            )
+                    val series = buildUiSeriesFromState(vm)
 
-                            GraphsScreen(
-                                title = "Графики 24ч",
-                                series = series,
-                                mode = if (mode == AppMode.EARTH)
-                                    GraphsMode.EARTH
-                                else
-                                    GraphsMode.SUN,
-                                strings = strings,
-                                onClose = { currentScreen = "now" }
-                            )
-                        }
-                    }
+                    GraphsScreen(
+                        title = "Графики 24ч",
+                        series = series,
+                        mode = if (mode == AppMode.EARTH)
+                            GraphsMode.EARTH
+                        else
+                            GraphsMode.SUN,
+                        strings = com.example.wittyapp.ui.strings.AppStrings.ru(),
+                        onClose = { currentScreen = "now" }
+                    )
                 }
             }
         }
