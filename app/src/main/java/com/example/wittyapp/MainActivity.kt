@@ -3,10 +3,6 @@ package com.example.wittyapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.MaterialTheme
 import com.example.wittyapp.net.SpaceWeatherApi
 import com.example.wittyapp.ui.AppTabs
