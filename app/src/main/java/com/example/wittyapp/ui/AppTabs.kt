@@ -61,11 +61,7 @@ fun AppTabs(
                 .padding(pad)
                 .padding(16.dp)
         ) {
-            // Без transitionSpec — так компилируется стабильно на твоей связке.
-            AnimatedContent(
-                targetState = tab,
-                label = "tabs"
-            ) { t ->
+            AnimatedContent(targetState = tab, label = "tabs") { t ->
                 when (t) {
                     Tab.NOW -> now()
                     Tab.AURORA -> aurora()
@@ -75,4 +71,3 @@ fun AppTabs(
         }
     }
 }
-```0
