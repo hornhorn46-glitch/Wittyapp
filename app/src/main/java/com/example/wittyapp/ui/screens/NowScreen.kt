@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.wittyapp.AppMode
 import com.example.wittyapp.R
@@ -94,29 +93,51 @@ fun NowScreen(
 
             GlassCard {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Прогноз сияний (3 часа)", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                    Text("${state.auroraScore}/100 — ${state.auroraTitle}", color = Color.White.copy(alpha = 0.90f))
+                    Text(
+                        "Прогноз сияний (3 часа)",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White
+                    )
+                    Text(
+                        "${state.auroraScore}/100 — ${state.auroraTitle}",
+                        color = Color.White.copy(alpha = 0.90f)
+                    )
                     LinearProgressIndicator(
                         progress = { (state.auroraScore.coerceIn(0, 100) / 100f) },
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = Color.White.copy(alpha = 0.20f)
                     )
                     if (state.auroraDetails.isNotBlank()) {
-                        Text(state.auroraDetails, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f))
+                        Text(
+                            state.auroraDetails,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
                     }
                 }
             }
 
             GlassCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Параметры (сейчас)", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Параметры (сейчас)",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                        )
                         IconButton(onClick = { help = HelpTopic.OVERVIEW }) {
                             Icon(Icons.Outlined.Info, contentDescription = null, tint = Color.White)
                         }
                     }
 
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                             SpeedometerGauge(
                                 title = "Kp",
@@ -143,7 +164,10 @@ fun NowScreen(
                         }
                     }
 
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                             SpeedometerGauge(
                                 title = "Bz",
@@ -174,8 +198,16 @@ fun NowScreen(
 
             GlassCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Компас B-field (Bx/Bz)", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Компас B-field (Bx/Bz)",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                        )
                         IconButton(onClick = { help = HelpTopic.BFIELD }) {
                             Icon(Icons.Outlined.Info, contentDescription = null, tint = Color.White)
                         }
@@ -188,7 +220,11 @@ fun NowScreen(
             }
 
             GlassCard {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("🐸 тут была лягушка", color = Color.White.copy(alpha = 0.9f))
                     Text("тут был Женя", color = Color.White.copy(alpha = 0.65f))
                 }
@@ -223,7 +259,11 @@ private fun TopRow(
     onGraphs: () -> Unit,
     onEvents: () -> Unit
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
         Column {
             Text(title, style = MaterialTheme.typography.headlineMedium, color = Color.White)
             Text(
@@ -242,11 +282,23 @@ private fun TopRow(
 
 @Composable
 private fun LoadingToastSheet(visible: Boolean, text: String) {
-    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = Modifier.fillMaxSize()
+    ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             GlassCard(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = Color.White)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
                     Text(text, color = Color.White)
                 }
             }
@@ -366,10 +418,11 @@ Kp — индекс геомагнитной активности (0–9).
 
 @Composable
 private fun BFieldCompass(bx: Float, bz: Float) {
-    // угол по двум осям: вверх при Bz>0, вниз при Bz<0, вправо при Bx>0
-    val angle = Math.toDegrees(atan2(bz.toDouble(), bx.toDouble())).toFloat() // -180..180, 0 = вправо
-    // преобразуем так, чтобы 90 = вверх, -90 = вниз
-    val displayAngle = angle
+    // ВАЖНО: MaterialTheme нельзя дергать внутри Canvas, поэтому берём цвета здесь
+    val primary = MaterialTheme.colorScheme.primary
+
+    // угол по двум осям: 0° вправо (Bx+), 90° вверх (Bz+), -90° вниз (Bz-)
+    val angle = Math.toDegrees(atan2(bz.toDouble(), bx.toDouble())).toFloat()
 
     Canvas(Modifier.fillMaxWidth().height(220.dp)) {
         val w = size.width
@@ -377,8 +430,7 @@ private fun BFieldCompass(bx: Float, bz: Float) {
         val c = Offset(w / 2f, h / 2f)
         val r = min(w, h) * 0.38f
 
-        // сектора вокруг "вниз" (270°). В координатах Canvas 0° вправо, 90° вниз, 180° влево, 270° вверх
-        // Нам проще рисовать математически: сделаем целевую точку "вниз" = 90° в canvas.
+        // "вниз" в координатах Canvas: 90°
         val downCanvasDeg = 90f
 
         fun sector(deg: Float, color: Color) {
@@ -398,25 +450,29 @@ private fun BFieldCompass(bx: Float, bz: Float) {
         sector(20f, Color(0xFFFFB74D))
         sector(5f, Color(0xFFFF5252))
 
-        // окружность
         drawCircle(Color.White.copy(alpha = 0.20f), radius = r, center = c, style = Stroke(6f))
         drawCircle(Color.White.copy(alpha = 0.08f), radius = r * 0.82f, center = c, style = Stroke(2f))
 
-        // стрелка: преобразуем math angle (atan2(bz,bx) где 0 вправо, 90 вверх) к canvas (0 вправо, 90 вниз)
-        val mathDeg = displayAngle
-        val canvasDeg = 90f - mathDeg
+        // math -> canvas: math 0° вправо, 90° вверх; canvas 0° вправо, 90° вниз
+        val canvasDeg = 90f - angle
         val a = Math.toRadians(canvasDeg.toDouble())
         val p = Offset(c.x + cos(a).toFloat() * (r * 0.92f), c.y + sin(a).toFloat() * (r * 0.92f))
+
         val col = when {
-            // близко к "вниз": canvasDeg близко 90
             angleDiff(canvasDeg, downCanvasDeg) <= 5f -> Color(0xFFFF5252)
             angleDiff(canvasDeg, downCanvasDeg) <= 20f -> Color(0xFFFFB74D)
             angleDiff(canvasDeg, downCanvasDeg) <= 40f -> Color(0xFFFFFF66)
             angleDiff(canvasDeg, downCanvasDeg) <= 65f -> Color(0xFF66FF66)
-            else -> MaterialTheme.colorScheme.primary
+            else -> primary
         }
 
-        drawLine(Color.Black.copy(alpha = 0.28f), c + Offset(2f, 2f), p + Offset(2f, 2f), strokeWidth = 10f, cap = StrokeCap.Round)
+        drawLine(
+            Color.Black.copy(alpha = 0.28f),
+            c + Offset(2f, 2f),
+            p + Offset(2f, 2f),
+            strokeWidth = 10f,
+            cap = StrokeCap.Round
+        )
         drawLine(col, c, p, strokeWidth = 10f, cap = StrokeCap.Round)
         drawCircle(Color.White.copy(alpha = 0.90f), radius = 10f, center = c)
     }
