@@ -2,10 +2,10 @@ package com.example.wittyapp.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -20,6 +20,8 @@ data class GraphSeries(
     val points: List<GraphPoint>
 )
 
+private enum class GraphTab { KP, BZ, SPEED }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphsScreen(
@@ -27,11 +29,27 @@ fun GraphsScreen(
     series: List<GraphSeries>,
     onClose: () -> Unit
 ) {
+    var tab by remember { mutableStateOf(GraphTab.KP) }
+
+    val kp = series.firstOrNull { it.name.startsWith("Kp") }
+    val bz = series.firstOrNull { it.name.startsWith("Bz") }
+    val sp = series.firstOrNull { it.name.startsWith("Скорость") || it.name.startsWith("Speed") }
+
+    val current = when (tab) {
+        GraphTab.KP -> kp
+        GraphTab.BZ -> bz
+        GraphTab.SPEED -> sp
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(title) },
-                actions = { TextButton(onClick = onClose) { Text("Закрыть") } }
+                navigationIcon = {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    }
+                }
             )
         }
     ) { pad ->
@@ -39,18 +57,15 @@ fun GraphsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pad)
-                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            series.forEach { s ->
+
+            SegmentedButtons(tab = tab, onTab = { tab = it })
+
+            current?.let { s ->
                 Card {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(s.name, style = MaterialTheme.typography.titleMedium)
                             Text(s.hint, style = MaterialTheme.typography.bodySmall)
@@ -67,12 +82,21 @@ fun GraphsScreen(
                             pointColor = pointColor,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(220.dp)
+                                .height(260.dp)
                         )
                     }
                 }
-            }
+            } ?: Text("Нет данных для графика")
         }
+    }
+}
+
+@Composable
+private fun SegmentedButtons(tab: GraphTab, onTab: (GraphTab) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = tab == GraphTab.KP, onClick = { onTab(GraphTab.KP) }, label = { Text("Kp") })
+        FilterChip(selected = tab == GraphTab.BZ, onClick = { onTab(GraphTab.BZ) }, label = { Text("Bz") })
+        FilterChip(selected = tab == GraphTab.SPEED, onClick = { onTab(GraphTab.SPEED) }, label = { Text("Speed") })
     }
 }
 
@@ -113,16 +137,10 @@ private fun LineChart(
             return (h - pad) - (y - minY) / dy * (h - 2 * pad)
         }
 
-        // grid
         val gridN = 4
         for (i in 0..gridN) {
             val yy = pad + i * (h - 2 * pad) / gridN
-            drawLine(
-                color = gridColor,
-                start = Offset(pad, yy),
-                end = Offset(w - pad, yy),
-                strokeWidth = 1f
-            )
+            drawLine(color = gridColor, start = Offset(pad, yy), end = Offset(w - pad, yy), strokeWidth = 1f)
         }
 
         val path = Path()
@@ -134,13 +152,8 @@ private fun LineChart(
 
         drawPath(path = path, color = lineColor, style = Stroke(width = 4f))
 
-        // last point
         points.lastOrNull()?.let { last ->
-            drawCircle(
-                color = pointColor,
-                radius = 7f,
-                center = Offset(sx(last.x), sy(last.y))
-            )
+            drawCircle(color = pointColor, radius = 7f, center = Offset(sx(last.x), sy(last.y)))
         }
     }
 }
