@@ -29,7 +29,7 @@ android {
         compose = true
     }
 
-    // ВАЖНО: существующая версия Compose Compiler (а не 1.6.0)
+    // ВАЖНО: существующая версия Compose compiler (исправляет "compiler:1.6.0 not found")
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
@@ -51,7 +51,6 @@ android {
 }
 
 dependencies {
-    // Compose BOM (версии Compose библиотек тянутся отсюда)
     val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -65,6 +64,6 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // ВАЖНО: даёт XML-темы Theme.Material3.*
+    // Чтобы существовала тема Theme.Material3.DayNight.NoActionBar из AndroidManifest.xml
     implementation("com.google.android.material:material:1.12.0")
 }
