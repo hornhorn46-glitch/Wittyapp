@@ -5,10 +5,9 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        // Android Gradle Plugin
         id("com.android.application") version "8.3.1"
-        // Kotlin Android plugin
         id("org.jetbrains.kotlin.android") version "1.9.24"
+        id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
     }
 }
 
@@ -20,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WittyApp"
+rootProject.name = "Wittyapp"
 include(":app")

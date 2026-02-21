@@ -1,81 +1,42 @@
 package com.example.wittyapp.domain
 
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
-data class KpSample(val time: Instant, val kp: Double)
-data class PlasmaSample(val time: Instant, val speedKmS: Double?, val densityCC: Double?)
-data class MagSample(val time: Instant, val bzNt: Double?)
+private val json = Json { ignoreUnknownKeys = true }
 
-data class GraphPoint(val x: Float, val y: Float)
-
-fun parseKpSeries(raw: JsonElement): List<KpSample> {
-    val arr = raw as? JsonArray ?: return emptyList()
-    if (arr.size < 2) return emptyList()
-    return arr.drop(1).mapNotNull { row ->
-        val r = row as? JsonArray ?: return@mapNotNull null
-        val time = r.getOrNull(0)?.jsonPrimitive?.contentOrNull?.let(::parseSwpcTime) ?: return@mapNotNull null
-        val kp = r.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
-        KpSample(time, kp)
-    }
+fun parseKp1m(body: String): List<KpSample> {
+    val el = json.parseToJsonElement(body)
+    val arr = el.jsonArray
+    return arr.mapNotNull { it.jsonObject.let { o ->
+        val time = o["time_tag"]?.jsonPrimitive?.contentOrNull ?: return@let null
+        val kp = o["kp_index"]?.jsonPrimitive?.doubleOrNull ?: return@let null
+        KpSample(Instant.parse(time), kp)
+    } }
 }
 
-fun parsePlasmaSeries(raw: JsonElement): List<PlasmaSample> {
-    val arr = raw as? JsonArray ?: return emptyList()
-    if (arr.size < 2) return emptyList()
-    return arr.drop(1).mapNotNull { row ->
-        val r = row as? JsonArray ?: return@mapNotNull null
-        val time = r.getOrNull(0)?.jsonPrimitive?.contentOrNull?.let(::parseSwpcTime) ?: return@mapNotNull null
-        val density = r.getOrNull(1)?.jsonPrimitive?.doubleOrNull
-        val speed = r.getOrNull(2)?.jsonPrimitive?.doubleOrNull
-        PlasmaSample(time, speedKmS = speed, densityCC = density)
-    }
+fun parseWind1m(body: String): List<WindSample> {
+    val el = json.parseToJsonElement(body)
+    val arr = el.jsonArray
+    return arr.mapNotNull { it.jsonObject.let { o ->
+        val time = o["time_tag"]?.jsonPrimitive?.contentOrNull ?: return@let null
+        val speed = o["speed"]?.jsonPrimitive?.doubleOrNull ?: return@let null
+        val density = o["density"]?.jsonPrimitive?.doubleOrNull
+        WindSample(Instant.parse(time), speed, density)
+    } }
 }
 
-fun parseMagSeries(raw: JsonElement): List<MagSample> {
-    val arr = raw as? JsonArray ?: return emptyList()
-    if (arr.size < 2) return emptyList()
-    return arr.drop(1).mapNotNull { row ->
-        val r = row as? JsonArray ?: return@mapNotNull null
-        val time = r.getOrNull(0)?.jsonPrimitive?.contentOrNull?.let(::parseSwpcTime) ?: return@mapNotNull null
-        val bz = r.getOrNull(3)?.jsonPrimitive?.doubleOrNull
-        MagSample(time, bzNt = bz)
-    }
-}
-
-/** Берём последние 24ч и делаем точки "минуты назад" -> value */
-fun kpToGraph24h(series: List<KpSample>, now: Instant): List<GraphPoint> {
-    val from = now.minusSeconds(24 * 3600)
-    val s = series.filter { it.time >= from && it.time <= now }
-    return s.map { GraphPoint(x = ((it.time.epochSecond - from.epochSecond) / 60f), y = it.kp.toFloat()) }
-}
-
-fun bzToGraph24h(series: List<MagSample>, now: Instant): List<GraphPoint> {
-    val from = now.minusSeconds(24 * 3600)
-    val s = series.filter { it.time >= from && it.time <= now }.mapNotNull { it.bzNt?.let { bz -> it.time to bz } }
-    return s.map { (t, bz) -> GraphPoint(x = ((t.epochSecond - from.epochSecond) / 60f), y = bz.toFloat()) }
-}
-
-fun speedToGraph24h(series: List<PlasmaSample>, now: Instant): List<GraphPoint> {
-    val from = now.minusSeconds(24 * 3600)
-    val s = series.filter { it.time >= from && it.time <= now }.mapNotNull { it.speedKmS?.let { v -> it.time to v } }
-    return s.map { (t, v) -> GraphPoint(x = ((t.epochSecond - from.epochSecond) / 60f), y = v.toFloat()) }
-}
-
-private fun parseSwpcTime(s: String): Instant? {
-    runCatching { return Instant.parse(s) }.getOrNull()
-
-    val patterns = listOf(
-        "yyyy-MM-dd HH:mm:ss.SSS",
-        "yyyy-MM-dd HH:mm:ss"
-    )
-    for (p in patterns) {
-        val fmt = DateTimeFormatter.ofPattern(p)
-        val dt = runCatching { LocalDateTime.parse(s, fmt) }.getOrNull()
-        if (dt != null) return dt.toInstant(ZoneOffset.UTC)
-    }
-    return null
+fun parseMag1m(body: String): List<MagSample> {
+    val el = json.parseToJsonElement(body)
+    val arr = el.jsonArray
+    return arr.mapNotNull { it.jsonObject.let { o ->
+        val time = o["time_tag"]?.jsonPrimitive?.contentOrNull ?: return@let null
+        val bx = o["bx_gsm"]?.jsonPrimitive?.doubleOrNull ?: o["bx_gse"]?.jsonPrimitive?.doubleOrNull
+        val by = o["by_gsm"]?.jsonPrimitive?.doubleOrNull ?: o["by_gse"]?.jsonPrimitive?.doubleOrNull
+        val bz = o["bz_gsm"]?.jsonPrimitive?.doubleOrNull ?: o["bz_gse"]?.jsonPrimitive?.doubleOrNull
+        MagSample(Instant.parse(time), bx, by, bz)
+    } }
 }

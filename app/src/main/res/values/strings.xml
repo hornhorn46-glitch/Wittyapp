@@ -1,5 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The name of the application as displayed on the device. -->
-    <string name="app_name">WittyApp</string>
+    <string name="app_name">Wittyapp</string>
 </resources>

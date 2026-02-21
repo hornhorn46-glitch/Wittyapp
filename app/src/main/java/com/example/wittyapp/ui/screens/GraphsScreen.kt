@@ -2,226 +2,210 @@ package com.example.wittyapp.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.wittyapp.domain.GraphPoint
-import kotlin.math.max
-import kotlin.math.min
+import com.example.wittyapp.ui.GraphSeries
+import com.example.wittyapp.ui.strings.AppStrings
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
-data class GraphSeries(
-    val name: String,
-    val hint: String,
-    val points: List<GraphPoint>
-)
+enum class GraphsMode { EARTH }
 
-private enum class GraphTab { KP, BZ, SPEED }
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphsScreen(
     title: String,
-    series: List<GraphSeries>,
+    series: GraphSeries,
+    mode: GraphsMode,
+    strings: AppStrings,
+    contentPadding: PaddingValues,
     onClose: () -> Unit
 ) {
-    var tab by remember { mutableStateOf(GraphTab.KP) }
-
-    val kp = series.firstOrNull { it.name.startsWith("Kp") }
-    val bz = series.firstOrNull { it.name.startsWith("Bz") }
-    val sp = series.firstOrNull { it.name.contains("Скорость") || it.name.contains("Speed") }
-
-    val current = when (tab) {
-        GraphTab.KP -> kp
-        GraphTab.BZ -> bz
-        GraphTab.SPEED -> sp
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
-                    }
-                }
-            )
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.headlineMedium)
+            TextButton(onClick = onClose) { Text(strings.close) }
         }
-    ) { pad ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(pad)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = tab == GraphTab.KP, onClick = { tab = GraphTab.KP }, label = { Text("Kp") })
-                FilterChip(selected = tab == GraphTab.BZ, onClick = { tab = GraphTab.BZ }, label = { Text("Bz") })
-                FilterChip(selected = tab == GraphTab.SPEED, onClick = { tab = GraphTab.SPEED }, label = { Text("Speed") })
+
+        GraphCard(
+            header = "Kp",
+            unit = "",
+            points = series.kp.map { it.t to it.v.toFloat() },
+            yStep = 1f,
+            dangerBands = listOf(DangerBand(from = 7f, to = 9f, color = Color(0x33FF5252)))
+        )
+
+        GraphCard(
+            header = "Bz (нТл)",
+            unit = "нТл",
+            points = series.bz.map { it.t to it.v.toFloat() },
+            yStep = 2f,
+            dangerBands = listOf(DangerBand(from = -20f, to = -6f, color = Color(0x33FF5252)))
+        )
+
+        GraphCard(
+            header = "Speed (км/с)",
+            unit = "км/с",
+            points = series.speed.map { it.t to it.v.toFloat() },
+            yStep = 100f,
+            dangerBands = listOf(DangerBand(from = 650f, to = 1200f, color = Color(0x22FFB300)))
+        )
+
+        Spacer(Modifier.height(80.dp))
+    }
+}
+
+private data class DangerBand(val from: Float, val to: Float, val color: Color)
+
+@Composable
+private fun GraphCard(
+    header: String,
+    unit: String,
+    points: List<Pair<java.time.Instant, Float>>,
+    yStep: Float,
+    dangerBands: List<DangerBand>
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(header, style = MaterialTheme.typography.titleLarge)
+
+            if (points.size < 2) {
+                Text("Нет данных", style = MaterialTheme.typography.bodyMedium)
+                return@Column
             }
 
-            current?.let { s ->
-                Card {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(s.name, fontWeight = FontWeight.SemiBold)
-                        Text(s.hint, style = MaterialTheme.typography.bodySmall)
+            val times = points.map { it.first }
+            val ys = points.map { it.second }
+            val minY = (ys.minOrNull() ?: 0f)
+            val maxY = (ys.maxOrNull() ?: 1f)
+            val pad = (maxY - minY).coerceAtLeast(yStep)
+            val y0 = (minY - pad * 0.15f)
+            val y1 = (maxY + pad * 0.15f)
 
-                        LineChartWithAxes(
-                            points = s.points,
-                            mode = tab,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(280.dp)
-                        )
+            val leftLabel = 44.dp
+            val bottomLabel = 22.dp
+
+            Box(Modifier.fillMaxWidth().height(220.dp)) {
+                Canvas(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(start = leftLabel, bottom = bottomLabel)
+                ) {
+                    val w = size.width
+                    val h = size.height
+
+                    fun yToPx(v: Float): Float {
+                        val t = ((v - y0) / (y1 - y0)).coerceIn(0f, 1f)
+                        return h - t * h
                     }
+
+                    // опасные зоны
+                    dangerBands.forEach { b ->
+                        val top = yToPx(b.to)
+                        val bot = yToPx(b.from)
+                        val yTop = minOf(top, bot)
+                        val yBot = maxOf(top, bot)
+                        drawRect(b.color, topLeft = Offset(0f, yTop), size = Size(w, yBot - yTop))
+                    }
+
+                    // сетка горизонтальная
+                    val firstTick = (kotlin.math.floor(y0 / yStep) * yStep).toFloat()
+                    var tick = firstTick
+                    while (tick <= y1 + 0.0001f) {
+                        val yy = yToPx(tick)
+                        drawLine(Color.White.copy(alpha = 0.10f), Offset(0f, yy), Offset(w, yy), strokeWidth = 1f)
+                        tick += yStep
+                    }
+
+                    // сетка вертикальная (6 полос)
+                    val vLines = 6
+                    for (i in 0..vLines) {
+                        val x = w * (i / vLines.toFloat())
+                        drawLine(Color.White.copy(alpha = 0.08f), Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
+                    }
+
+                    // линия
+                    val minT = times.first()
+                    val maxT = times.last()
+                    val span = (maxT.toEpochMilli() - minT.toEpochMilli()).coerceAtLeast(1)
+
+                    fun xToPx(t: java.time.Instant): Float {
+                        val dt = (t.toEpochMilli() - minT.toEpochMilli()).toFloat()
+                        return (dt / span) * w
+                    }
+
+                    val path = Path()
+                    points.forEachIndexed { i, (t, v) ->
+                        val x = xToPx(t)
+                        val y = yToPx(v)
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+
+                    drawPath(
+                        path = path,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = Stroke(width = 5f, cap = StrokeCap.Round)
+                    )
                 }
-            } ?: Text("Нет данных для графика")
+
+                // подписи Y слева
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(leftLabel),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    val top = y1
+                    val mid = (y0 + y1) / 2f
+                    val bot = y0
+                    Text(formatTick(top), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f))
+                    Text(formatTick(mid), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f))
+                    Text(formatTick(bot), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f))
+                }
+
+                // подписи X снизу
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = leftLabel)
+                        .fillMaxWidth()
+                        .height(bottomLabel),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    val fmt = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+                    val t0 = times.first()
+                    val t1 = times[times.size / 2]
+                    val t2 = times.last()
+                    Text(fmt.format(t0), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f))
+                    Text(fmt.format(t1), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f))
+                    Text(fmt.format(t2), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f))
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun LineChartWithAxes(
-    points: List<GraphPoint>,
-    mode: GraphTab,
-    modifier: Modifier = Modifier
-) {
-    if (points.size < 2) {
-        Text("Недостаточно данных")
-        return
-    }
-
-    val rawMinX = points.minOf { it.x }
-    val rawMaxX = points.maxOf { it.x }
-    val rawMinY = points.minOf { it.y }
-    val rawMaxY = points.maxOf { it.y }
-
-    val padY = (rawMaxY - rawMinY).let { if (it == 0f) 1f else it } * 0.15f
-    val minY = rawMinY - padY
-    val maxY = rawMaxY + padY
-
-    val lineGood = MaterialTheme.colorScheme.primary
-    val gridColor = MaterialTheme.colorScheme.outlineVariant
-
-    Canvas(modifier = modifier) {
-
-        val w = size.width
-        val h = size.height
-
-        val leftPad = 52f
-        val bottomPad = 30f
-        val topPad = 10f
-        val rightPad = 10f
-
-        fun sx(x: Float): Float {
-            val dx = (rawMaxX - rawMinX).coerceAtLeast(0.0001f)
-            return leftPad + (x - rawMinX) / dx * (w - leftPad - rightPad)
-        }
-
-        fun sy(y: Float): Float {
-            val dy = (maxY - minY).coerceAtLeast(0.0001f)
-            return (h - bottomPad) - (y - minY) / dy * (h - topPad - bottomPad)
-        }
-
-        // grid Y
-        val gridN = 4
-        for (i in 0..gridN) {
-            val yy = topPad + i * (h - topPad - bottomPad) / gridN
-            drawLine(
-                color = gridColor,
-                start = Offset(leftPad, yy),
-                end = Offset(w - rightPad, yy),
-                strokeWidth = 1f
-            )
-        }
-
-        // axes
-        drawLine(gridColor, Offset(leftPad, topPad), Offset(leftPad, h - bottomPad), 2f)
-        drawLine(gridColor, Offset(leftPad, h - bottomPad), Offset(w - rightPad, h - bottomPad), 2f)
-
-        fun fmtY(v: Float): String = when (mode) {
-            GraphTab.KP -> String.format("%.1f", v)
-            GraphTab.BZ -> String.format("%.1f", v)
-            GraphTab.SPEED -> String.format("%.0f", v)
-        }
-
-        // y labels (min/mid/max using raw bounds for clarity)
-        val yMin = rawMinY
-        val yMax = rawMaxY
-        val yMid = (rawMinY + rawMaxY) / 2f
-
-        drawIntoCanvas { canvas ->
-            val p = android.graphics.Paint().apply {
-                color = android.graphics.Color.argb(220, 255, 255, 255)
-                textSize = 24f
-                isAntiAlias = true
-            }
-            canvas.nativeCanvas.drawText(fmtY(yMax), 2f, sy(yMax) + 8f, p)
-            canvas.nativeCanvas.drawText(fmtY(yMid), 2f, sy(yMid) + 8f, p)
-            canvas.nativeCanvas.drawText(fmtY(yMin), 2f, sy(yMin) + 8f, p)
-        }
-
-        // x ticks labels: 24ч..0ч (условно)
-        val ticks = 4
-        for (i in 0..ticks) {
-            val x = leftPad + i * (w - leftPad - rightPad) / ticks
-            drawLine(gridColor, Offset(x, h - bottomPad), Offset(x, h - bottomPad + 6f), 2f)
-
-            val hours = 24 - i * (24 / ticks) // Int
-            val label = "${hours}ч"
-
-            drawIntoCanvas { canvas ->
-                val p = android.graphics.Paint().apply {
-                    color = android.graphics.Color.argb(220, 255, 255, 255)
-                    textSize = 22f
-                    isAntiAlias = true
-                }
-                canvas.nativeCanvas.drawText(label, x - 18f, h - 4f, p)
-            }
-        }
-
-        // conditional colored segments
-        for (i in 0 until points.size - 1) {
-            val a = points[i]
-            val b = points[i + 1]
-
-            val color = when (mode) {
-                GraphTab.BZ -> if (min(a.y, b.y) <= -6f) Color(0xFFFF5252) else lineGood
-                GraphTab.SPEED -> if (max(a.y, b.y) >= 600f) Color(0xFFFF5252) else lineGood
-                GraphTab.KP -> if (max(a.y, b.y) >= 6f) Color(0xFFFFC107) else lineGood
-            }
-
-            drawLine(
-                color = color,
-                start = Offset(sx(a.x), sy(a.y)),
-                end = Offset(sx(b.x), sy(b.y)),
-                strokeWidth = 4f
-            )
-        }
-
-        // last point marker
-        points.lastOrNull()?.let { last ->
-            drawCircle(
-                color = Color.White,
-                radius = 5f,
-                center = Offset(sx(last.x), sy(last.y))
-            )
-        }
-    }
+private fun formatTick(v: Float): String {
+    val iv = v.roundToInt()
+    return iv.toString()
 }

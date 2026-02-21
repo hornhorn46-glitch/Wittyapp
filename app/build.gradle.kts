@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -12,7 +12,7 @@ android {
         applicationId = "com.example.wittyapp"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
+        versionCode = 2
         versionName = "2.0"
     }
 
@@ -39,7 +39,9 @@ android {
     kotlinOptions { jvmTarget = "17" }
 
     packaging {
-        resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -49,24 +51,18 @@ dependencies {
     androidTestImplementation(composeBom)
 
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-
-    // ИКОНКИ (чинит Public/Speed/List)
-    implementation("androidx.compose.material:material-icons-extended")
-
-    // Ktor + JSON
-    implementation("io.ktor:ktor-client-okhttp:2.3.12")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-
-    // Картинки (aurora forecast)
-    implementation("io.coil-kt:coil-compose:2.6.0")
-
-    // XML-тема из манифеста
-    implementation("com.google.android.material:material:1.12.0")
-
+    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // networking + json
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // WebView in fullscreen screen
+    implementation("androidx.compose.ui:ui-viewbinding")
 }

@@ -1,54 +1,27 @@
 package com.example.wittyapp.net
 
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
-class SpaceWeatherApi(
-    private val nasaApiKey: String = "DEMO_KEY"
-) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
+class SpaceWeatherApi {
+    private val client = OkHttpClient()
+
+    suspend fun get(url: String): String = withContext(Dispatchers.IO) {
+        val req = Request.Builder().url(url).build()
+        client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) error("HTTP ${'$'}{resp.code} for ${'$'}url")
+            resp.body?.string() ?: ""
+        }
     }
 
-    private val client = HttpClient(OkHttp) {
-        install(ContentNegotiation) { json(json) }
-    }
+    suspend fun kp1mJson(): String =
+        get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json")
 
-    // NOAA SWPC
-    suspend fun fetchKp(): JsonElement =
-        client.get("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json").body()
+    suspend fun wind1mJson(): String =
+        get("https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json")
 
-    suspend fun fetchSolarWindPlasma1d(): JsonElement =
-        client.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json").body()
-
-    suspend fun fetchSolarWindMag1d(): JsonElement =
-        client.get("https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json").body()
-
-    // NASA DONKI (через api.nasa.gov)
-    suspend fun fetchDonkiCme(startDate: String, endDate: String): JsonArray =
-        client.get("https://api.nasa.gov/DONKI/CME") {
-            parameter("startDate", startDate)
-            parameter("endDate", endDate)
-            parameter("api_key", nasaApiKey)
-        }.body()
-
-    suspend fun fetchDonkiFlares(startDate: String, endDate: String): JsonArray =
-        client.get("https://api.nasa.gov/DONKI/FLR") {
-            parameter("startDate", startDate)
-            parameter("endDate", endDate)
-            parameter("api_key", nasaApiKey)
-        }.body()
-
-    suspend fun fetchDonkiGeomagneticStorm(startDate: String, endDate: String): JsonArray =
-        client.get("https://api.nasa.gov/DONKI/GST") {
-            parameter("startDate", startDate)
-            parameter("endDate", endDate)
-            parameter("api_key", nasaApiKey)
-        }.body()
+    suspend fun mag1mJson(): String =
+        get("https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json")
 }
