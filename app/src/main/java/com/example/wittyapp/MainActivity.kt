@@ -19,23 +19,19 @@ class MainActivity : ComponentActivity() {
         val api = SpaceWeatherApi(nasaApiKey = "DEMO_KEY")
 
         setContent {
-
             val vm: SpaceWeatherViewModel =
                 viewModel(factory = SimpleFactory { SpaceWeatherViewModel(api) })
 
             var screen by remember { mutableStateOf(Screen.NOW) }
 
             CosmosTheme(auroraScore = vm.state.auroraScore) {
-
                 when (screen) {
-
                     Screen.NOW -> NowScreen(
                         vm = vm,
                         onOpenGraphs = { screen = Screen.GRAPHS }
                     )
-
                     Screen.GRAPHS -> GraphsScreen(
-                        title = "Графики",
+                        title = "Графики (24ч)",
                         series = vm.simpleGraphSeries(),
                         onClose = { screen = Screen.NOW }
                     )
