@@ -32,6 +32,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.*
 import kotlin.random.Random
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 
 @Composable
 fun NowScreen(
