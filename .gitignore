@@ -1,0 +1,14 @@
+.godot/
+.godot_user/
+export_templates/
+feature_profiles/
+script_templates/
+text_editor_themes/
+tools/godot/godot.zip
+tools/godot/Godot_v*.exe
+assets/external/
+artifacts/
+build/
+*.tpz
+*.zip
+*.tmp
