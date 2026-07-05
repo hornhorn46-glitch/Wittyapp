@@ -339,6 +339,14 @@ func _material_for_node(node_name: String, color: Color) -> StandardMaterial3D:
 		sign.emission = color
 		sign.emission_energy_multiplier = 0.12
 		return sign
+	if "Cable" in node_name or "Pipe" in node_name or "Rail" in node_name:
+		var metal := StandardMaterial3D.new()
+		metal.albedo_color = color
+		metal.roughness = 0.50
+		metal.metallic = 0.28
+		if color.a < 1.0:
+			metal.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		return metal
 	if "OutsideLitWindow" in node_name:
 		var lit := StandardMaterial3D.new()
 		lit.albedo_color = color
@@ -678,6 +686,7 @@ func _create_architectural_details() -> void:
 		_create_door_soft_trim(data[0], data[1])
 	_create_extra_room_dressing()
 	_create_room_interiors()
+	_create_micro_detail_layer()
 
 func _create_room_cove_edges(room_name: String, center: Vector3, size: Vector3) -> void:
 	var trim_color := Color(0.050, 0.064, 0.062)
@@ -822,6 +831,119 @@ func _create_room_interiors() -> void:
 	_add_model("cog-a.glb", Vector3(18.78, 0.98, 0.98), Vector3(0, 20, 0), Vector3(0.34, 0.34, 0.34))
 	_add_model("box-small.glb", Vector3(18.20, 1.00, 0.92), Vector3(0, -20, 0), Vector3(0.35, 0.35, 0.35))
 	_visual_box("MaintenanceRolledMat", Vector3(18.95, 0.12, -1.52), Vector3(0.95, 0.10, 0.26), Color(0.04, 0.09, 0.085))
+
+func _create_micro_detail_layer() -> void:
+	_create_wall_outlet(Vector3(2.88, 0.42, 1.86), "x")
+	_create_wall_outlet(Vector3(-2.88, 0.42, -0.72), "x")
+	_create_wall_outlet(Vector3(8.70, 0.42, -6.02), "z")
+	_create_wall_outlet(Vector3(15.63, 0.42, -8.95), "x")
+	_create_light_switch(Vector3(2.88, 1.18, -1.28), "x")
+	_create_light_switch(Vector3(10.08, 1.18, -1.62), "x")
+	_create_light_switch(Vector3(14.75, 1.18, -5.20), "z")
+	_create_vent_grille(Vector3(1.10, 2.53, -2.37), "z")
+	_create_vent_grille(Vector3(6.50, 2.50, -6.04), "z")
+	_create_vent_grille(Vector3(15.62, 2.08, -6.52), "x")
+	_create_window_blinds(Vector3(-3.04, 1.58, 1.0), "x", 1.30)
+	_create_window_blinds(Vector3(15.73, 1.58, -7.4), "x", 1.22)
+	_create_window_blinds(Vector3(10.4, 1.58, -10.34), "z", 1.28)
+	_create_radiator(Vector3(-2.86, 0.58, 0.55), "z", 0.98)
+	_create_radiator(Vector3(10.48, 0.58, -9.42), "x", 1.10)
+	_create_floor_cable_bundle(Vector3(5.25, 0.045, -1.46), 1.35, "x")
+	_create_floor_cable_bundle(Vector3(12.50, 0.045, -3.35), 1.10, "z")
+	_create_floor_cable_bundle(Vector3(14.45, 0.045, -8.78), 0.90, "x")
+	_create_loose_paper_stack(Vector3(0.38, 0.025, -0.92), Vector3(0, 12, 0))
+	_create_loose_paper_stack(Vector3(6.98, 0.86, -5.32), Vector3(0, -18, 0))
+	_create_loose_paper_stack(Vector3(14.02, 0.56, -7.66), Vector3(0, 8, 0))
+	_create_wall_frame(Vector3(2.88, 1.58, 0.20), "x", Vector2(0.54, 0.42), Color(0.10, 0.16, 0.14), Color(0.64, 0.54, 0.35))
+	_create_wall_frame(Vector3(8.74, 1.52, -4.12), "x", Vector2(0.48, 0.38), Color(0.12, 0.12, 0.16), Color(0.55, 0.44, 0.32))
+	_create_wall_frame(Vector3(15.63, 1.55, -8.55), "x", Vector2(0.46, 0.52), Color(0.14, 0.11, 0.10), Color(0.54, 0.38, 0.30))
+	_add_bounce_light(Vector3(1.55, 1.18, 1.35), Color(1.0, 0.62, 0.32), 0.18, 2.5)
+	_add_bounce_light(Vector3(6.75, 1.18, -4.55), Color(0.92, 0.78, 0.55), 0.14, 2.3)
+	_add_bounce_light(Vector3(14.35, 1.10, -7.85), Color(1.0, 0.58, 0.30), 0.20, 2.5)
+	_add_bounce_light(Vector3(12.90, 1.05, -12.35), Color(0.42, 0.95, 0.70), 0.12, 2.2)
+
+func _create_wall_outlet(position: Vector3, axis: String) -> void:
+	var plate := _soft_visual_box("WallOutletPlate", position, Vector3(0.09, 0.14, 0.018), Color(0.70, 0.68, 0.60), 0.015)
+	if axis == "x":
+		plate.rotation_degrees.y = 90
+	_visual_box("WallOutletSlotA", position + _surface_offset(axis, 0.012) + Vector3(0, 0.020, 0), _oriented_size(axis, Vector3(0.012, 0.035, 0.010)), Color(0.045, 0.047, 0.045))
+	_visual_box("WallOutletSlotB", position + _surface_offset(axis, 0.012) + Vector3(0, -0.020, 0), _oriented_size(axis, Vector3(0.012, 0.035, 0.010)), Color(0.045, 0.047, 0.045))
+
+func _create_light_switch(position: Vector3, axis: String) -> void:
+	var plate := _soft_visual_box("LightSwitchPlate", position, Vector3(0.10, 0.18, 0.018), Color(0.62, 0.64, 0.58), 0.016)
+	if axis == "x":
+		plate.rotation_degrees.y = 90
+	var rocker := _soft_visual_box("LightSwitchRocker", position + _surface_offset(axis, 0.014), Vector3(0.052, 0.092, 0.014), Color(0.78, 0.76, 0.66), 0.010)
+	if axis == "x":
+		rocker.rotation_degrees.y = 90
+
+func _create_vent_grille(position: Vector3, axis: String) -> void:
+	var frame := _soft_visual_box("VentGrilleFrame", position, Vector3(0.64, 0.22, 0.018), Color(0.055, 0.066, 0.066), 0.018)
+	if axis == "x":
+		frame.rotation_degrees.y = 90
+	for i in range(4):
+		var offset_y := -0.075 + float(i) * 0.05
+		var slat := _visual_box("VentGrilleSlat", position + _surface_offset(axis, 0.014) + Vector3(0, offset_y, 0), _oriented_size(axis, Vector3(0.54, 0.012, 0.010)), Color(0.015, 0.018, 0.018))
+		if axis == "x":
+			slat.rotation_degrees.y = 90
+
+func _create_window_blinds(position: Vector3, axis: String, width: float) -> void:
+	for i in range(5):
+		var y := 1.98 - float(i) * 0.16
+		var slat_pos := Vector3(position.x, y, position.z) + _surface_offset(axis, 0.020)
+		var slat := _visual_box("WindowBlindSlat", slat_pos, _oriented_size(axis, Vector3(width, 0.018, 0.018)), Color(0.70, 0.68, 0.58, 0.72))
+		if axis == "x":
+			slat.rotation_degrees.y = 90
+	_cylinder_bar("WindowBlindCord", Vector3(position.x, 1.55, position.z) + _surface_offset(axis, 0.025) + Vector3(0.38, 0, 0), 0.008, 0.75, "y", Color(0.75, 0.72, 0.62))
+
+func _create_radiator(position: Vector3, axis: String, width: float) -> void:
+	for i in range(5):
+		var x_offset := -width * 0.40 + float(i) * width * 0.20
+		var tube_pos := position + (Vector3(x_offset, 0, 0) if axis == "z" else Vector3(0, 0, x_offset))
+		_cylinder_bar("RadiatorPipe", tube_pos, 0.028, 0.72, "y", Color(0.48, 0.48, 0.42))
+	_cylinder_bar("RadiatorTopRail", position + Vector3(0, 0.36, 0), 0.018, width, axis, Color(0.45, 0.45, 0.40))
+	_cylinder_bar("RadiatorBottomRail", position + Vector3(0, -0.36, 0), 0.018, width, axis, Color(0.38, 0.38, 0.35))
+
+func _create_floor_cable_bundle(position: Vector3, length: float, axis: String) -> void:
+	for i in range(3):
+		var offset := -0.035 + float(i) * 0.035
+		var pos := position + (Vector3(0, 0.002 * i, offset) if axis == "x" else Vector3(offset, 0.002 * i, 0))
+		_cylinder_bar("FloorCableBundle", pos, 0.011, length, axis, Color(0.018 + i * 0.012, 0.020 + i * 0.010, 0.020 + i * 0.008))
+
+func _create_loose_paper_stack(position: Vector3, rotation_degrees_value: Vector3) -> void:
+	for i in range(3):
+		var paper := _visual_box("LoosePaper", position + Vector3(0, i * 0.006, 0), Vector3(0.34, 0.006, 0.22), Color(0.72 - i * 0.04, 0.69 - i * 0.03, 0.56 - i * 0.02))
+		paper.rotation_degrees = rotation_degrees_value + Vector3(0, float(i) * 8.0, 0)
+
+func _create_wall_frame(position: Vector3, axis: String, size_value: Vector2, inner_color: Color, frame_color: Color) -> void:
+	var frame := _soft_visual_box("WallPictureFrame", position, Vector3(size_value.x, size_value.y, 0.026), frame_color, 0.030)
+	if axis == "x":
+		frame.rotation_degrees.y = 90
+	var inner := _soft_visual_box("WallPictureInner", position + _surface_offset(axis, 0.018), Vector3(size_value.x - 0.10, size_value.y - 0.10, 0.018), inner_color, 0.018)
+	if axis == "x":
+		inner.rotation_degrees.y = 90
+
+func _add_bounce_light(position: Vector3, color: Color, energy: float, range_value: float) -> void:
+	var light := OmniLight3D.new()
+	light.name = "SoftBounceLight"
+	light.position = position
+	light.light_color = color
+	light.light_energy = energy
+	light.light_indirect_energy = 0.55
+	light.omni_range = range_value
+	light.omni_attenuation = 1.75
+	light.shadow_enabled = false
+	add_child(light)
+
+func _surface_offset(axis: String, amount: float) -> Vector3:
+	if axis == "x":
+		return Vector3(amount, 0, 0)
+	return Vector3(0, 0, amount)
+
+func _oriented_size(axis: String, size_value: Vector3) -> Vector3:
+	if axis == "x":
+		return Vector3(size_value.z, size_value.y, size_value.x)
+	return size_value
 
 func _create_wear_marks() -> void:
 	for data in [

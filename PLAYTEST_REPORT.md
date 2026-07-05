@@ -30,6 +30,27 @@ Screenshots generated:
 - `artifacts/screenshots/showcase_06_rescue_npc_corner.png`
 - `artifacts/screenshots/showcase_07_exit_stairwell.png`
 
+## 2026-07-05 Micro Detail Polish Pass
+
+Run modes:
+
+```powershell
+python .\tests\validate_project.py
+tools\godot\Godot_v4.2.2-stable_win64.exe --headless --path . --script res://tests/godot_input_playtest.gd
+tools\godot\Godot_v4.2.2-stable_win64.exe --display-driver windows --rendering-driver opengl3 --path . --script res://tests/godot_mouse_picture_check.gd
+tools\godot\Godot_v4.2.2-stable_win64.exe --display-driver windows --rendering-driver opengl3 --path . --script res://tests/room_showcase_capture.gd
+```
+
+Result: passed.
+
+Checked:
+
+- Full route still completes after adding non-blocking micro-detail props.
+- Mouse-look remains visually verified: `yaw=0.3821`, `pitch=0.1029`, `image_delta=0.1333`.
+- Added non-blocking room details: outlets, light switches, vents, blinds, radiators, cable bundles, loose papers, wall frames, and soft bounce lights.
+- Fallback humanoids now include extra read details: chest panel, belt, buckle, and knee pads.
+- No Godot process remained after the capture and validation pass.
+
 ## 2026-07-04 Interior Scale and Door Pass
 
 Run modes:

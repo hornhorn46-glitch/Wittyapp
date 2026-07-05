@@ -52,6 +52,7 @@ static func make_smooth_humanoid(node_name: String, body_color: Color, accent_co
 	var dark_mat := _make_material(Color(0.045, 0.050, 0.052), 0.62, 0.08)
 	var eye_mat := _make_material(Color(0.018, 0.022, 0.024), 0.45, 0.0)
 	var shoe_mat := _make_material(Color(0.025, 0.026, 0.026), 0.54, 0.08)
+	var belt_mat := _make_material(Color(0.055, 0.043, 0.034), 0.58, 0.0)
 	_add_capsule(root, "Torso", Vector3(0, 0.82, 0), 0.24, 0.78, body_mat)
 	_add_capsule(root, "Vest", Vector3(0, 0.86, -0.035), 0.18, 0.58, accent_mat)
 	_add_capsule(root, "Neck", Vector3(0, 1.17, 0), 0.070, 0.16, skin_mat)
@@ -62,12 +63,16 @@ static func make_smooth_humanoid(node_name: String, body_color: Color, accent_co
 	_add_sphere(root, "Nose", Vector3(0, 1.32, -0.178), Vector3(0.022, 0.030, 0.018), skin_mat)
 	_add_sphere(root, "ShoulderLeft", Vector3(-0.24, 1.05, 0.0), Vector3(0.10, 0.08, 0.10), body_mat)
 	_add_sphere(root, "ShoulderRight", Vector3(0.24, 1.05, 0.0), Vector3(0.10, 0.08, 0.10), body_mat)
+	_add_box(root, "ChestPanel", Vector3(0, 0.98, -0.205), Vector3(0.26, 0.20, 0.018), accent_mat)
+	_add_box(root, "Belt", Vector3(0, 0.55, -0.205), Vector3(0.38, 0.055, 0.024), belt_mat)
+	_add_box(root, "BeltBuckle", Vector3(0, 0.555, -0.225), Vector3(0.075, 0.060, 0.020), accent_mat)
 	for side in [-1.0, 1.0]:
 		var arm := _add_capsule(root, "Arm", Vector3(side * 0.31, 0.78, 0.0), 0.055, 0.58, body_mat)
 		arm.rotation_degrees.z = side * -10.0
 		_add_sphere(root, "Hand", Vector3(side * 0.36, 0.47, 0.02), Vector3(0.065, 0.060, 0.065), skin_mat)
 		var leg := _add_capsule(root, "Leg", Vector3(side * 0.10, 0.31, 0.0), 0.075, 0.58, dark_mat)
 		leg.rotation_degrees.z = side * 2.0
+		_add_box(root, "KneePad", Vector3(side * 0.10, 0.25, -0.075), Vector3(0.105, 0.075, 0.025), belt_mat)
 		_add_sphere(root, "Shoe", Vector3(side * 0.10, 0.03, -0.045), Vector3(0.09, 0.045, 0.16), shoe_mat)
 	if hostile:
 		_add_sphere(root, "ShoulderBeacon", Vector3(0.18, 1.13, -0.18), Vector3(0.055, 0.055, 0.055), _make_emissive(Color(0.9, 0.10, 0.04), 0.45))
@@ -151,6 +156,17 @@ static func _add_sphere(parent: Node3D, node_name: String, position: Vector3, sc
 	mesh.height = 2.0
 	mesh.radial_segments = 24
 	mesh.rings = 12
+	mesh_instance.mesh = mesh
+	mesh_instance.material_override = material
+	parent.add_child(mesh_instance)
+	return mesh_instance
+
+static func _add_box(parent: Node3D, node_name: String, position: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = node_name
+	mesh_instance.position = position
+	var mesh := BoxMesh.new()
+	mesh.size = size
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = material
 	parent.add_child(mesh_instance)
