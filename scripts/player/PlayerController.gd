@@ -11,6 +11,8 @@ const WALK_SPEED := 3.5
 const CROUCH_SPEED := 1.55
 const LOOK_SENSITIVITY := 0.0022
 const THROW_FORCE := 8.0
+const INTERACT_DISTANCE := 3.2
+const INTERACT_FOCUS_DOT := 0.82
 
 var camera: Camera3D
 var interact_ray: RayCast3D
@@ -20,12 +22,16 @@ var look_pitch := 0.0
 var footstep_timer := 0.0
 var inventory := {}
 var current_focus_text := ""
+var gameplay_input_enabled := true
 
 func _ready() -> void:
 	name = "Player"
 	add_to_group("player")
 	_create_body()
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	_capture_mouse_for_gameplay()
+	call_deferred("_capture_mouse_for_gameplay")
+	set_process_input(true)
+	set_process_unhandled_input(true)
 
 func _create_body() -> void:
 	var collision := CollisionShape3D.new()
@@ -39,23 +45,60 @@ func _create_body() -> void:
 	camera.position = Vector3(0, 0.68, 0)
 	add_child(camera)
 	interact_ray = RayCast3D.new()
-	interact_ray.target_position = Vector3(0, 0, -2.4)
+	interact_ray.target_position = Vector3(0, 0, -INTERACT_DISTANCE)
 	interact_ray.collide_with_areas = true
 	camera.add_child(interact_ray)
 
+func _input(event: InputEvent) -> void:
+	if _handle_gameplay_input(event):
+		get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * LOOK_SENSITIVITY)
-		look_pitch = clamp(look_pitch - event.relative.y * LOOK_SENSITIVITY, -1.25, 1.25)
-		camera.rotation.x = look_pitch
+	_handle_gameplay_input(event)
+
+func _handle_gameplay_input(event: InputEvent) -> bool:
+	if not gameplay_input_enabled or not is_inside_tree() or get_tree().paused:
+		return false
+	if event is InputEventMouseButton and event.pressed and Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		_capture_mouse_for_gameplay()
+		return true
+	if event is InputEventMouseMotion and _can_look_with_mouse():
+		_apply_look_delta(event.relative)
+		return true
 	if event.is_action_pressed("interact"):
 		_try_interact()
+		return true
 	if event.is_action_pressed("throw_item"):
 		_throw_held_item()
+		return true
 	if event.is_action_pressed("drop_item"):
 		_drop_held_item()
+		return true
+	return false
+
+func _can_look_with_mouse() -> bool:
+	return gameplay_input_enabled and (Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED or (is_inside_tree() and not get_tree().paused))
+
+func _capture_mouse_for_gameplay() -> void:
+	if gameplay_input_enabled and is_inside_tree() and not get_tree().paused:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+func set_gameplay_input_enabled(enabled: bool) -> void:
+	gameplay_input_enabled = enabled
+	if not enabled:
+		current_focus_text = ""
+		focus_changed.emit(current_focus_text)
+	else:
+		call_deferred("_capture_mouse_for_gameplay")
+
+func _apply_look_delta(relative: Vector2) -> void:
+	rotate_y(-relative.x * LOOK_SENSITIVITY)
+	look_pitch = clamp(look_pitch - relative.y * LOOK_SENSITIVITY, -1.25, 1.25)
+	camera.rotation.x = look_pitch
 
 func _physics_process(delta: float) -> void:
+	if gameplay_input_enabled and Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var basis := global_transform.basis
 	var direction := (basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -85,7 +128,52 @@ func get_focused_interactable() -> Node:
 	var target := interact_ray.get_collider()
 	if target and target.has_method("interact"):
 		return target
-	return null
+	return _nearest_center_screen_interactable()
+
+func _nearest_center_screen_interactable() -> Node:
+	if not camera:
+		return null
+	var best: Node = null
+	var best_score := -1.0
+	var forward := -camera.global_transform.basis.z.normalized()
+	for candidate in get_tree().get_nodes_in_group("interactable"):
+		if candidate == self or not (candidate is Node3D) or not candidate.has_method("interact"):
+			continue
+		var target_node := candidate as Node3D
+		var focus_point := _interaction_focus_point(target_node)
+		var to_candidate: Vector3 = focus_point - camera.global_position
+		var distance := to_candidate.length()
+		if distance > INTERACT_DISTANCE or distance <= 0.01:
+			continue
+		var direction := to_candidate / distance
+		var focus := forward.dot(direction)
+		if focus < INTERACT_FOCUS_DOT:
+			continue
+		if not _has_clear_interaction_line(target_node, focus_point):
+			continue
+		var score := focus - distance * 0.045
+		if score > best_score:
+			best_score = score
+			best = candidate
+	return best
+
+func _interaction_focus_point(target_node: Node3D) -> Vector3:
+	if target_node.has_method("interaction_focus_point"):
+		return target_node.interaction_focus_point(self)
+	if target_node.is_in_group("throwable") or target_node.is_in_group("key_item"):
+		return target_node.global_position + Vector3(0, 0.08, 0)
+	return target_node.global_position + Vector3(0, 0.85, 0)
+
+func _has_clear_interaction_line(target_node: Node3D, focus_point: Vector3) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(camera.global_position, focus_point)
+	query.exclude = [get_rid()]
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return true
+	var collider := hit.get("collider") as Node
+	return collider == target_node or (collider != null and target_node.is_ancestor_of(collider))
 
 func get_current_interaction_text() -> String:
 	return current_focus_text
@@ -145,7 +233,7 @@ func _update_footsteps(delta: float, moving: bool) -> void:
 		return
 	footstep_timer -= delta
 	if footstep_timer <= 0.0:
-		AudioManager.play_sfx("footstep")
+		AudioManager.play_footstep(is_crouched)
 		if not is_crouched:
 			SoundEventSystem.emit_sound(global_position, 4.2, self)
-		footstep_timer = 0.55 if is_crouched else 0.36
+		footstep_timer = 0.62 if is_crouched else 0.43

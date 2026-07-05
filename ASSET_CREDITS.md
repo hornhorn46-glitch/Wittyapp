@@ -30,7 +30,14 @@ External assets are curated from license-safe sources and copied into `assets/cu
   - Author: Kenney
   - License: Creative Commons Zero, CC0
   - Local paths: `assets/curated/models/characters/civilian.glb`, `assets/curated/models/characters/hostile.glb`, `assets/curated/models/characters/Textures/texture-a.png`, `assets/curated/models/characters/Textures/texture-r.png`
-  - Purpose in game: rescued civilian and hostile NPC models
+  - Purpose in game: fallback rescued civilian and hostile NPC models
+
+- Asset packs: Quaternius Animated Man Pack and Animated Woman Pack
+  - Source URLs: `https://quaternius.com/packs/animatedman.html`, `https://quaternius.com/packs/animatedwoman.html`
+  - Author: Quaternius
+  - License: Creative Commons Zero, CC0
+  - Local paths: `assets/curated/models/quaternius/animated_human.glb`, `assets/curated/models/quaternius/animated_woman_smooth.glb`; source FBX files are kept beside them
+  - Purpose in game: smoother primary rescued civilian and hostile NPC models with imported idle/walk/run animation data
 
 - Asset pack: Kenney UI Pack Sci-fi
   - Source URL: `https://kenney.nl/assets/ui-pack-sci-fi`
@@ -44,6 +51,22 @@ External assets are curated from license-safe sources and copied into `assets/cu
   - Author/license status: Wikimedia Commons, Public Domain
   - Local path: not imported into the game
   - Purpose in game: reference for a more architectural room plan with side rooms and closed service areas
+
+## External CC0 Audio Assets
+
+- Asset pack: Kenney RPG Audio
+  - Source URL: `https://kenney.nl/assets/rpg-audio`
+  - Author: Kenney
+  - License: Creative Commons Zero, CC0
+  - Local paths: `assets/audio/kenney_footstep_*.ogg`, `assets/audio/kenney_door_open.ogg`, `assets/audio/kenney_door_close.ogg`
+  - Purpose in game: softer varied footstep sounds and door open/close feedback
+
+- Asset pack: Kenney Music Jingles
+  - Source URL: `https://kenney.nl/assets/music-jingles`
+  - Author: Kenney
+  - License: Creative Commons Zero, CC0
+  - Local path: `assets/audio/kenney_level_music.ogg`
+  - Purpose in game: subtle looping level music bed
 
 All assets below were generated locally for this project by `tools/generate_assets.py` unless noted otherwise. They are original project assets and may be used commercially as part of this project.
 

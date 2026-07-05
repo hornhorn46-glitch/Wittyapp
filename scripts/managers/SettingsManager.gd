@@ -40,8 +40,9 @@ func apply_settings() -> void:
 	_set_bus_volume("Master", master_volume)
 	_set_bus_volume("Music", music_volume)
 	_set_bus_volume("SFX", sfx_volume)
-	DisplayServer.window_set_size(resolution)
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_size(resolution)
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
 	save_settings()
 	settings_changed.emit()
 
@@ -56,4 +57,3 @@ func _set_bus_volume(bus_name: String, linear: float) -> void:
 		return
 	AudioServer.set_bus_mute(idx, linear <= 0.001)
 	AudioServer.set_bus_volume_db(idx, linear_to_db(clamp(linear, 0.001, 1.0)))
-

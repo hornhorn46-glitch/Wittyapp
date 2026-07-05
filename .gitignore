@@ -6,7 +6,9 @@ script_templates/
 text_editor_themes/
 tools/godot/godot.zip
 tools/godot/Godot_v*.exe
+tools/fbx2gltf/
 assets/external/
+codex-work/
 artifacts/
 build/
 *.tpz

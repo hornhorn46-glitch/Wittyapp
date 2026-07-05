@@ -10,18 +10,21 @@ func _ready() -> void:
 	_show_main_menu()
 
 func _replace_scene(next_scene: Node) -> void:
+	get_tree().paused = false
 	if current_scene:
 		current_scene.queue_free()
 	current_scene = next_scene
 	add_child(current_scene)
 
 func _show_main_menu() -> void:
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	var menu := preload("res://scripts/ui/MainMenu.gd").new()
 	menu.new_game_requested.connect(_start_game)
 	menu.exit_requested.connect(_exit_game)
 	_replace_scene(menu)
 
 func _start_game() -> void:
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	var game := preload("res://scripts/world/GameWorld.gd").new()
 	game.main_menu_requested.connect(_show_main_menu)
 	game.restart_requested.connect(_start_game)

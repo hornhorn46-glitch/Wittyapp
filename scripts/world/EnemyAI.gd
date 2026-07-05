@@ -5,6 +5,7 @@ signal player_detected
 enum State { IDLE, PATROL, INVESTIGATE, RETURN, SEARCH, ALERT }
 
 const ModelVisuals := preload("res://scripts/world/ModelVisuals.gd")
+const CharacterVisuals := preload("res://scripts/world/CharacterVisuals.gd")
 const SPEED := 2.0
 const DETECT_DISTANCE := 6.5
 const DETECT_ANGLE := 0.58
@@ -20,6 +21,11 @@ var player: Node3D
 var suspicion := 0.0
 var search_timer := 0.0
 var last_known_player_position := Vector3.ZERO
+var visual_root: Node3D
+var visual_animation_player: AnimationPlayer
+var visual_current_animation := ""
+var visual_base_y := 0.0
+var visual_anim_time := 0.0
 
 func _ready() -> void:
 	name = "HostileNPC"
@@ -61,6 +67,7 @@ func _physics_process(delta: float) -> void:
 		State.IDLE:
 			velocity = Vector3.ZERO
 	move_and_slide()
+	_animate_visual(delta)
 
 func _current_patrol_point() -> Vector3:
 	if patrol_points.is_empty():
@@ -143,37 +150,32 @@ func awareness_text_key() -> String:
 func _create_visual() -> void:
 	var collision := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.34
-	capsule.height = 1.75
+	capsule.radius = 0.30
+	capsule.height = 1.62
 	collision.shape = capsule
 	add_child(collision)
-	var packed := load("res://assets/curated/models/characters/hostile.glb")
+	var model_path := "res://assets/curated/models/quaternius/animated_human.glb"
+	var packed := load(model_path) if FileAccess.file_exists(model_path + ".import") else null
 	if packed:
 		var model: Node3D = packed.instantiate()
-		model.scale = Vector3(0.72, 0.72, 0.72)
-		model.position = Vector3(0, -0.48, 0)
-		var material := ModelVisuals.make_textured_material(
-			"res://assets/curated/models/characters/Textures/texture-r.png",
-			Color(0.95, 0.44, 0.36),
-			0.88,
-			Color(0.26, 0.02, 0.01),
-			0.12
-		)
-		ModelVisuals.apply_material(model, material)
+		model.name = "HostileVisual"
 		add_child(model)
+		CharacterVisuals.fit_model_height(model, 1.58, -0.35)
+		visual_root = model
+		visual_base_y = model.position.y
+		visual_animation_player = CharacterVisuals.find_animation_player(model)
 	else:
-		var mesh := MeshInstance3D.new()
-		var visual := CapsuleMesh.new()
-		visual.radius = 0.34
-		visual.height = 1.75
-		mesh.mesh = visual
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.03, 0.035, 0.038)
-		mat.emission_enabled = true
-		mat.emission = Color(0.10, 0.02, 0.02)
-		mat.emission_energy_multiplier = 0.35
-		mesh.material_override = mat
-		add_child(mesh)
+		var model := CharacterVisuals.make_smooth_humanoid(
+			"HostileSmoothVisual",
+			Color(0.18, 0.17, 0.15),
+			Color(0.56, 0.10, 0.07),
+			Color(0.64, 0.47, 0.36),
+			true
+		)
+		add_child(model)
+		CharacterVisuals.fit_model_height(model, 1.58, -0.35)
+		visual_root = model
+		visual_base_y = model.position.y
 	var cone := SpotLight3D.new()
 	cone.light_color = Color(1.0, 0.46, 0.32)
 	cone.light_energy = 1.2
@@ -181,3 +183,17 @@ func _create_visual() -> void:
 	cone.spot_angle = 34.0
 	cone.rotation_degrees.x = -12
 	add_child(cone)
+
+func _animate_visual(delta: float) -> void:
+	if not visual_root:
+		return
+	var moving := Vector2(velocity.x, velocity.z).length() > 0.08
+	visual_current_animation = CharacterVisuals.play_best_animation(visual_animation_player, moving, visual_current_animation)
+	if moving:
+		visual_anim_time += delta * 8.0
+		visual_root.position.y = visual_base_y + sin(visual_anim_time * 2.0) * 0.025
+		visual_root.rotation.z = sin(visual_anim_time) * 0.035
+	else:
+		visual_anim_time += delta * 1.4
+		visual_root.position.y = lerpf(visual_root.position.y, visual_base_y + sin(visual_anim_time) * 0.008, delta * 4.0)
+		visual_root.rotation.z = lerpf(visual_root.rotation.z, 0.0, delta * 5.0)

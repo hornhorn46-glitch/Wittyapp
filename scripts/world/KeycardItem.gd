@@ -12,6 +12,9 @@ func _ready() -> void:
 func interaction_text(_player: Node) -> String:
 	return "%s: %s" % [LocalizationManager.text("interact.take"), LocalizationManager.text(display_name_key)]
 
+func interaction_focus_point(_player: Node) -> Vector3:
+	return global_position + Vector3(0, 0.04, 0)
+
 func interact(player: Node) -> void:
 	if player and player.has_method("give_item"):
 		player.give_item(item_id)

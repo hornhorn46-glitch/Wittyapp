@@ -50,6 +50,9 @@ func interact(player: Node) -> void:
 func interaction_text(_player: Node) -> String:
 	return "%s: %s" % [LocalizationManager.text("interact.pickup"), _display_name()]
 
+func interaction_focus_point(_player: Node) -> Vector3:
+	return global_position + Vector3(0, max(collision_size.y * 0.35, 0.08), 0)
+
 func _display_name() -> String:
 	return LocalizationManager.text(display_name_key) if display_name_key != "" else display_name
 

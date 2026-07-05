@@ -23,11 +23,12 @@ func advance_for(event_name: String) -> void:
 		"rescue": "hint.rescue",
 		"exit": "hint.exit"
 	}
-	if index < steps.size() and wanted.get(event_name, "") == steps[index]:
-		index += 1
+	var wanted_step: String = wanted.get(event_name, "")
+	var wanted_index := steps.find(wanted_step)
+	if wanted_index >= index:
+		index = wanted_index + 1
 		hint_changed.emit(current_hint())
 	if event_name == "thrown":
 		objective_changed.emit("objective.distract")
 	elif event_name == "rescue":
 		objective_changed.emit("objective.exit")
-
