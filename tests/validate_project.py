@@ -13,6 +13,7 @@ REQUIRED_FILES = [
     "scripts/player/PlayerController.gd",
     "scripts/world/GameWorld.gd",
     "scripts/world/EnemyAI.gd",
+    "scripts/world/SecurityTerminal.gd",
     "scripts/world/ModelVisuals.gd",
     "scripts/world/RescueNPC.gd",
     "scripts/world/ThrowableItem.gd",
@@ -21,6 +22,7 @@ REQUIRED_FILES = [
     "scripts/ui/MainMenu.gd",
     "scripts/ui/SettingsMenu.gd",
     "scripts/ui/PauseMenu.gd",
+    "tests/godot_audio_system.gd",
     "ASSET_CREDITS.md",
     "README.md",
 ]
@@ -34,6 +36,22 @@ REQUIRED_AUDIO = [
     "distant_muffled_voice.wav",
     "tense_ambient_loop.wav",
     "low_background_music_loop.wav",
+    "menu_unsettling_loop.wav",
+    "game_unsettling_music_loop.wav",
+    "communal_room_ambient_loop.wav",
+    "radiator_knock.wav",
+    "pipe_water_noise.wav",
+    "phone_ring.wav",
+    "hostile_phone_argument.wav",
+    "soft_throw_drop.wav",
+    "door_soft_open.wav",
+    "door_soft_close.wav",
+    "footstep_concrete_00.wav",
+    "footstep_concrete_01.wav",
+    "footstep_concrete_02.wav",
+    "footstep_concrete_03.wav",
+    "footstep_concrete_04.wav",
+    "footstep_concrete_05.wav",
 ]
 
 REQUIRED_EXTERNAL_ASSETS = [
@@ -77,6 +95,8 @@ REQUIRED_LOCALIZATION_KEYS = [
     "hint.move",
     "hint.crouch",
     "hint.pickup",
+    "hint.security",
+    "hint.security_disabled",
     "hint.throw",
     "hint.rescue",
     "hint.exit",
@@ -88,6 +108,8 @@ REQUIRED_LOCALIZATION_KEYS = [
     "minimap.title",
     "interact.open_door",
     "interact.locked_keycard",
+    "interact.disable_security",
+    "interact.security_disabled",
     "item.security_badge",
     "status.awareness",
     "status.searching",
@@ -157,6 +179,8 @@ def test_tutorial_level_contains_required_systems():
         "_create_reflection_probes",
         "_create_furniture_set",
         "_create_real_room_details",
+        "_create_door_thresholds",
+        "SecurityTerminal.gd",
         "Bricks097",
         "Carpet016",
         "security_badge",
@@ -167,13 +191,19 @@ def test_tutorial_level_contains_required_systems():
 def test_gameplay_scripts_cover_required_behaviors():
     player = read("scripts/player/PlayerController.gd")
     enemy = read("scripts/world/EnemyAI.gd")
+    audio = read("scripts/managers/AudioManager.gd")
     item = read("scripts/world/ThrowableItem.gd")
     npc = read("scripts/world/RescueNPC.gd")
     door = read("scripts/world/Door.gd")
     for token in ["move_forward", "crouch", "interact", "throw_item", "drop_item", "give_item", "get_current_interaction_text"]:
         assert token in player
-    for token in ["PATROL", "INVESTIGATE", "SEARCH", "ALERT", "DETECT_DISTANCE", "_on_sound_emitted", "_has_line_of_sight", "suspicion"]:
+    for token in ["PATROL", "INVESTIGATE", "SEARCH", "ALERT", "DETECT_DISTANCE", "detection_multiplier", "phone_event_timer", "trigger_phone_call_for_test", "_on_sound_emitted", "_has_line_of_sight", "suspicion"]:
         assert token in enemy
+    for token in ["menu_unsettling_loop", "communal_room_ambient_loop", "radiator_knock", "pipe_water", "play_spatial_sfx", "loop_players", "sfx_pool"]:
+        assert token in audio
+    terminal = read("scripts/world/SecurityTerminal.gd")
+    for token in ["security_disabled", "interaction_text", "interact", "SecurityTerminalScreen"]:
+        assert token in terminal
     assert "SoundEventSystem.emit_sound" in item
     assert "throw_loudness" in item
     for token in ["FEAR", "FOLLOW", "RESCUED", "is_rescued"]:

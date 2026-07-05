@@ -35,6 +35,8 @@ var minimap_player: ColorRect
 var minimap_civilian: ColorRect
 var minimap_enemy: ColorRect
 var game_over := false
+var security_system_disabled := false
+var security_terminal: Node3D
 var safe_zone_pos := Vector3(13.0, 0, -12.85)
 
 func _ready() -> void:
@@ -108,8 +110,8 @@ func _build_environment() -> void:
 	_create_floor_plan_extensions()
 	_create_connector_hall()
 	_create_doorway_closures()
-	_create_door(Vector3(3.1, 0, -0.9))
-	_create_door(Vector3(9.8, 0, -1.0), true, "security_badge")
+	_create_door(Vector3(3.05, 0, -0.78))
+	_create_door(Vector3(9.8, 0, -0.8), true, "security_badge")
 	_create_cover(Vector3(12.0, 0.55, -2.6), Vector3(1.5, 1.1, 0.45))
 	_create_cover(Vector3(14.3, 0.55, 0.9), Vector3(1.2, 1.1, 0.5))
 	_create_cover(Vector3(12.1, 0.45, -7.7), Vector3(1.4, 0.9, 0.55))
@@ -398,9 +400,9 @@ func _pbr_material(asset_id: String, tint: Color, uv_scale: Vector2, roughness: 
 
 func _create_door(position: Vector3, locked: bool = false, required_item: String = "") -> void:
 	var door := preload("res://scripts/world/Door.gd").new()
-	var hinge_offset := Vector3(0, 0, -0.59)
-	var panel_offset := Vector3(0, 1.05, 0.59)
-	var latch_z := 1.02
+	var hinge_offset := Vector3(0, 0, -0.73)
+	var panel_offset := Vector3(0, 1.05, 0.73)
+	var latch_z := 1.24
 	var hinge_z := 0.035
 	door.position = position + hinge_offset
 	door.locked = locked
@@ -409,7 +411,7 @@ func _create_door(position: Vector3, locked: bool = false, required_item: String
 	var panel := MeshInstance3D.new()
 	panel.name = "DoorPanel"
 	var box := BoxMesh.new()
-	box.size = Vector3(0.16, 2.10, 1.18)
+	box.size = Vector3(0.16, 2.10, 1.46)
 	panel.mesh = box
 	panel.position = panel_offset
 	panel.material_override = _material_for_node("DoorWood", Color(0.18, 0.12, 0.08))
@@ -420,9 +422,9 @@ func _create_door(position: Vector3, locked: bool = false, required_item: String
 			var inset := MeshInstance3D.new()
 			inset.name = "DoorInsetPanel"
 			var inset_box := BoxMesh.new()
-			inset_box.size = Vector3(0.018, 0.46, 0.58)
+			inset_box.size = Vector3(0.018, 0.46, 0.70)
 			inset.mesh = inset_box
-			inset.position = Vector3(side * 0.091, y, 0.58)
+			inset.position = Vector3(side * 0.091, y, 0.73)
 			inset.material_override = trim_mat
 			door.add_child(inset)
 	var handle_mat := StandardMaterial3D.new()
@@ -433,7 +435,7 @@ func _create_door(position: Vector3, locked: bool = false, required_item: String
 		var latch_plate := MeshInstance3D.new()
 		latch_plate.name = "DoorLatchPlate"
 		var plate_box := BoxMesh.new()
-		plate_box.size = Vector3(0.018, 0.28, 0.13)
+		plate_box.size = Vector3(0.018, 0.28, 0.15)
 		latch_plate.mesh = plate_box
 		latch_plate.position = Vector3(side * 0.096, 1.08, latch_z)
 		latch_plate.material_override = handle_mat
@@ -441,7 +443,7 @@ func _create_door(position: Vector3, locked: bool = false, required_item: String
 		var handle := MeshInstance3D.new()
 		handle.name = "DoorHandle"
 		var handle_box := BoxMesh.new()
-		handle_box.size = Vector3(0.05, 0.12, 0.22)
+		handle_box.size = Vector3(0.05, 0.12, 0.26)
 		handle.mesh = handle_box
 		handle.position = Vector3(side * 0.115, 1.08, latch_z)
 		handle.material_override = handle_mat
@@ -450,7 +452,7 @@ func _create_door(position: Vector3, locked: bool = false, required_item: String
 		_add_cylinder_mesh(door, "DoorHingeKnuckle", Vector3(0.0, y, hinge_z), 0.045, 0.30, handle_mat)
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(0.18, 2.10, 1.18)
+	shape.size = Vector3(0.18, 2.10, 1.46)
 	collision.shape = shape
 	collision.position = panel_offset
 	door.add_child(collision)
@@ -481,11 +483,9 @@ func _create_props() -> void:
 	_make_visual_only(_add_model("button-floor-round.glb", Vector3(13.0, 0.03, -5.45), Vector3.ZERO, Vector3(0.42, 0.42, 0.42)))
 	_add_model("indicator-special-arrow.glb", Vector3(13.0, 0.08, -4.2), Vector3(0, 180, 0), Vector3(0.85, 0.85, 0.85))
 	_add_model("catwalk-straight.glb", Vector3(17.7, 0.04, -1.0), Vector3(0, 90, 0), Vector3(0.55, 0.55, 0.55))
-	_make_visual_only(_add_model("structure-doorway-wide.glb", Vector3(3.05, 0.0, -0.9), Vector3(0, 90, 0), Vector3(1.15, 1.15, 1.15)))
-	_make_visual_only(_add_model("structure-doorway-wide.glb", Vector3(9.8, 0.0, -1.0), Vector3(0, 90, 0), Vector3(1.15, 1.15, 1.15)))
-	_make_visual_only(_add_model("structure-doorway-wide.glb", Vector3(13.0, 0.0, -10.3), Vector3.ZERO, Vector3(1.08, 1.08, 1.08)))
 	_create_furniture_set()
 	_create_real_room_details()
+	_create_security_terminal()
 
 func _add_model(file_name: String, position: Vector3, rotation_degrees_value: Vector3, scale_value: Vector3) -> Node3D:
 	var packed := load(FACTORY_MODELS + file_name)
@@ -557,12 +557,11 @@ func _create_furniture_set() -> void:
 	_add_furniture_model("desk.glb", Vector3(6.5, 0.0, -5.55), Vector3.ZERO, Vector3(0.62, 0.62, 0.62))
 	_add_furniture_model("chairDesk.glb", Vector3(6.5, 0.0, -4.82), Vector3(0, 180, 0), Vector3(0.64, 0.64, 0.64))
 	_add_furniture_model("books.glb", Vector3(6.15, 0.86, -5.48), Vector3(0, 20, 0), Vector3(0.36, 0.36, 0.36))
-	_add_furniture_model("sideTable.glb", Vector3(15.05, 0.0, -8.70), Vector3.ZERO, Vector3(0.72, 0.72, 0.72))
 	_rounded_box("RescueNightstandSolid", Vector3(15.05, 0.40, -8.70), Vector3(0.72, 0.80, 0.58), Color(0.14, 0.09, 0.055), 0.08)
 	_create_table_lamp(Vector3(15.05, 0.77, -8.70), Color(1.0, 0.72, 0.43), 1.25, 3.1)
 	_add_furniture_model("bookcaseClosedWide.glb", Vector3(10.72, 0.0, -8.55), Vector3(0, 90, 0), Vector3(0.66, 0.66, 0.66))
 	_add_furniture_model("tableCoffee.glb", Vector3(14.25, 0.0, -7.55), Vector3.ZERO, Vector3(0.50, 0.50, 0.50))
-	_add_furniture_model("loungeDesignSofa.glb", Vector3(15.12, 0.0, -6.82), Vector3(0, -90, 0), Vector3(0.54, 0.54, 0.54))
+	_create_rescue_wall_sofa()
 	_add_furniture_model("cardboardBoxOpen.glb", Vector3(11.15, 0.0, -2.7), Vector3(0, 30, 0), Vector3(0.58, 0.58, 0.58))
 	_add_furniture_model("cardboardBoxClosed.glb", Vector3(15.2, 0.0, 0.85), Vector3(0, -20, 0), Vector3(0.62, 0.62, 0.62))
 	_add_furniture_model("radio.glb", Vector3(14.1, 0.95, 0.8), Vector3(0, -25, 0), Vector3(0.40, 0.40, 0.40))
@@ -587,7 +586,7 @@ func _create_real_room_details() -> void:
 		["bookcaseClosedWide.glb", Vector3(17.85, 0.0, -3.05), Vector3(0, -90, 0), Vector3(0.58, 0.58, 0.58)],
 		["cardboardBoxClosed.glb", Vector3(18.65, 0.0, -2.25), Vector3(0, 16, 0), Vector3(0.55, 0.55, 0.55)],
 		["cardboardBoxOpen.glb", Vector3(17.15, 0.0, 0.65), Vector3(0, -35, 0), Vector3(0.54, 0.54, 0.54)],
-		["chairModernCushion.glb", Vector3(14.72, 0.0, -8.00), Vector3(0, -120, 0), Vector3(0.68, 0.68, 0.68)],
+		["chairModernCushion.glb", Vector3(14.72, 0.0, -8.00), Vector3(0, -120, 0), Vector3(0.50, 0.50, 0.50)],
 		["plantSmall2.glb", Vector3(10.75, 0.0, -6.05), Vector3.ZERO, Vector3(0.46, 0.46, 0.46)]
 	]:
 		_add_furniture_model(data[0], data[1], data[2], data[3])
@@ -596,6 +595,14 @@ func _create_real_room_details() -> void:
 	_box("StorageShelfB", Vector3(16.25, 1.48, -2.8), Vector3(0.34, 0.08, 1.35), Color(0.08, 0.08, 0.075))
 	_rounded_box("BreakRoomCounterRounded", Vector3(11.05, 0.45, -6.2), Vector3(0.36, 0.9, 1.15), Color(0.16, 0.11, 0.08), 0.11)
 	_visual_box("OfficeNoticeBoard", Vector3(6.5, 1.35, 0.365), Vector3(1.35, 0.72, 0.025), Color(0.20, 0.12, 0.055))
+
+func _create_rescue_wall_sofa() -> void:
+	_soft_visual_box("RescueWallSofaSeat", Vector3(15.05, 0.42, -6.88), Vector3(0.62, 0.22, 1.26), Color(0.19, 0.11, 0.085), 0.14)
+	_soft_visual_box("RescueWallSofaBack", Vector3(15.40, 0.76, -6.88), Vector3(0.20, 0.78, 1.34), Color(0.14, 0.080, 0.060), 0.12)
+	_soft_visual_box("RescueWallSofaArmA", Vector3(15.07, 0.62, -6.18), Vector3(0.60, 0.54, 0.18), Color(0.16, 0.090, 0.070), 0.10)
+	_soft_visual_box("RescueWallSofaArmB", Vector3(15.07, 0.62, -7.58), Vector3(0.60, 0.54, 0.18), Color(0.16, 0.090, 0.070), 0.10)
+	_soft_visual_box("RescueWallSofaCushionA", Vector3(14.88, 0.56, -6.62), Vector3(0.40, 0.10, 0.46), Color(0.26, 0.16, 0.12), 0.08)
+	_soft_visual_box("RescueWallSofaCushionB", Vector3(14.88, 0.56, -7.12), Vector3(0.40, 0.10, 0.46), Color(0.23, 0.14, 0.11), 0.08)
 
 func _create_windows() -> void:
 	_create_window(Vector3(-3.01, 1.55, 1.0), Vector3(0.05, 1.0, 1.55), Vector3(0, 0, 0))
@@ -684,6 +691,7 @@ func _create_architectural_details() -> void:
 		[Vector3(6.45, 1.35, 0.31), "x"],
 	]:
 		_create_door_soft_trim(data[0], data[1])
+	_create_door_thresholds()
 	_create_extra_room_dressing()
 	_create_room_interiors()
 	_create_micro_detail_layer()
@@ -728,6 +736,55 @@ func _create_door_soft_trim(position: Vector3, width_axis: String) -> void:
 		_cylinder_bar("DoorRoundedLeftJamb", position + Vector3(0, 0.0, -0.78), 0.055, 2.45, "y", trim_color)
 		_cylinder_bar("DoorRoundedRightJamb", position + Vector3(0, 0.0, 0.78), 0.055, 2.45, "y", trim_color)
 		_cylinder_bar("DoorRoundedHeader", position + Vector3(0, 1.21, 0), 0.055, 1.56, "z", trim_color)
+
+func _create_door_thresholds() -> void:
+	for data in [
+		[Vector3(3.0, 0.032, -0.78), "z", 1.58],
+		[Vector3(10.0, 0.032, -0.8), "z", 1.58],
+		[Vector3(6.5, 0.032, -2.15), "x", 1.72],
+		[Vector3(13.0, 0.032, -5.3), "x", 1.80],
+		[Vector3(13.0, 0.032, -10.3), "x", 1.80],
+		[Vector3(6.45, 0.032, 0.31), "x", 1.08],
+	]:
+		_create_door_threshold(data[0], data[1], data[2])
+
+func _create_door_threshold(position: Vector3, width_axis: String, width: float) -> void:
+	var plate_size := Vector3(width, 0.045, 0.20) if width_axis == "x" else Vector3(0.20, 0.045, width)
+	_soft_visual_box("DoorThresholdPlate", position, plate_size, Color(0.050, 0.058, 0.056), 0.04)
+	var gasket_color := Color(0.020, 0.025, 0.023)
+	if width_axis == "x":
+		_visual_box("DoorJambShadowStrip", position + Vector3(-width * 0.5, 0.07, 0), Vector3(0.035, 0.10, 0.28), gasket_color)
+		_visual_box("DoorJambShadowStrip", position + Vector3(width * 0.5, 0.07, 0), Vector3(0.035, 0.10, 0.28), gasket_color)
+	else:
+		_visual_box("DoorJambShadowStrip", position + Vector3(0, 0.07, -width * 0.5), Vector3(0.28, 0.10, 0.035), gasket_color)
+		_visual_box("DoorJambShadowStrip", position + Vector3(0, 0.07, width * 0.5), Vector3(0.28, 0.10, 0.035), gasket_color)
+
+func _create_security_terminal() -> void:
+	security_terminal = preload("res://scripts/world/SecurityTerminal.gd").new()
+	security_terminal.name = "SecurityTerminal"
+	security_terminal.position = Vector3(5.65, 1.18, -2.055)
+	add_child(security_terminal)
+	if security_terminal.has_signal("security_disabled"):
+		security_terminal.security_disabled.connect(_on_security_terminal_disabled)
+	var glow := OmniLight3D.new()
+	glow.name = "SecurityTerminalReadyGlow"
+	glow.position = Vector3(5.65, 1.28, -1.78)
+	glow.light_color = Color(0.22, 0.95, 0.62)
+	glow.light_energy = 0.18
+	glow.omni_range = 1.35
+	glow.shadow_enabled = false
+	add_child(glow)
+
+func _on_security_terminal_disabled() -> void:
+	if security_system_disabled:
+		return
+	security_system_disabled = true
+	if enemy and enemy.has_method("set_security_system_disabled"):
+		enemy.set_security_system_disabled(true)
+	if tutorial:
+		tutorial.advance_for("security")
+	_set_hint("hint.security_disabled")
+	_add_bounce_light(Vector3(5.65, 1.22, -1.72), Color(0.45, 0.95, 0.62), 0.28, 1.8)
 
 func _create_extra_room_dressing() -> void:
 	for pos in [Vector3(-2.15, 0.0, 1.15), Vector3(-1.55, 0.0, 1.15), Vector3(0.95, 0.0, 2.05)]:
@@ -1059,7 +1116,7 @@ func _create_tension_scene() -> void:
 	light.spot_range = 7.0
 	add_child(light)
 	light.look_at(Vector3(9.9, 1.1, -2.25), Vector3.UP)
-	AudioManager.play_sfx("voice")
+	AudioManager.play_spatial_sfx("voice", Vector3(11.6, 1.25, -2.2), self, -14.0, 0.92, 14.0)
 
 func _create_throwables() -> void:
 	var positions := [

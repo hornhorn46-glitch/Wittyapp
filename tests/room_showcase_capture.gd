@@ -28,6 +28,7 @@ func _run() -> void:
 	_setup_camera()
 	await _capture_from(Vector3(-1.70, 1.28, 1.58), Vector3(1.45, 1.08, 0.85), "showcase_01_start_room.png")
 	await _capture_from(Vector3(0.85, 1.22, -0.98), Vector3(3.02, 1.08, -0.92), "showcase_02_door_hinge_handle.png")
+	await _capture_from(Vector3(6.35, 1.24, -1.30), Vector3(5.65, 1.16, -2.05), "showcase_03_security_terminal.png")
 	await _capture_from(Vector3(6.40, 1.24, -2.55), Vector3(6.70, 1.00, -5.65), "showcase_03_records_room.png")
 	await _capture_from(Vector3(12.05, 1.24, -0.35), Vector3(14.92, 0.98, 1.10), "showcase_04_patrol_guard_scale.png")
 	await _capture_from(Vector3(13.35, 1.25, -5.92), Vector3(14.90, 1.00, -8.45), "showcase_05_rescue_room_entry.png")

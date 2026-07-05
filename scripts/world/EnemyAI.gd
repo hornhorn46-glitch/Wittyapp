@@ -26,6 +26,13 @@ var visual_animation_player: AnimationPlayer
 var visual_current_animation := ""
 var visual_base_y := 0.0
 var visual_anim_time := 0.0
+var detection_multiplier := 1.0
+var phone_event_timer: Timer
+var phone_argument_delay_timer: Timer
+var phone_end_timer: Timer
+var phone_prop: Node3D
+var phone_call_active := false
+var phone_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	name = "HostileNPC"
@@ -33,14 +40,26 @@ func _ready() -> void:
 	start_position = global_position
 	SoundEventSystem.sound_emitted.connect(_on_sound_emitted)
 	_create_visual()
+	phone_rng.randomize()
+	_setup_phone_event()
 
 func setup(points: Array[Vector3], target_player: Node3D) -> void:
 	patrol_points = points
 	player = target_player
 
+func set_security_system_disabled(disabled: bool) -> void:
+	detection_multiplier = 0.72 if disabled else 1.0
+	if disabled:
+		suspicion = minf(suspicion, 0.20)
+
 func _physics_process(delta: float) -> void:
 	if player and _update_detection(delta):
 		player_detected.emit()
+		return
+	if phone_call_active and state == State.PATROL:
+		velocity = Vector3.ZERO
+		move_and_slide()
+		_animate_visual(delta)
 		return
 	match state:
 		State.PATROL:
@@ -90,9 +109,10 @@ func _update_detection(delta: float) -> bool:
 	if _can_see_player():
 		last_known_player_position = player.global_position
 		var distance := global_position.distance_to(player.global_position)
-		var proximity := remap(clamp(distance, 1.0, DETECT_DISTANCE), DETECT_DISTANCE, 1.0, 0.65, 1.65)
+		var effective_detect_distance := DETECT_DISTANCE * detection_multiplier
+		var proximity := remap(clamp(distance, 1.0, effective_detect_distance), effective_detect_distance, 1.0, 0.65, 1.65)
 		var crouch_modifier := 0.45 if player.get("is_crouched") else 1.0
-		suspicion = clamp(suspicion + delta * SUSPICION_BUILD_RATE * proximity * crouch_modifier, 0.0, 1.0)
+		suspicion = clamp(suspicion + delta * SUSPICION_BUILD_RATE * proximity * crouch_modifier * detection_multiplier, 0.0, 1.0)
 		if suspicion > 0.48 and state != State.ALERT:
 			state = State.ALERT
 		return suspicion >= 1.0
@@ -109,13 +129,14 @@ func _can_see_player() -> bool:
 	var to_player := player.global_position - global_position
 	to_player.y = 0
 	var distance := to_player.length()
-	if distance > DETECT_DISTANCE:
+	var effective_detect_distance := DETECT_DISTANCE * detection_multiplier
+	if distance > effective_detect_distance:
 		return false
 	var forward := -global_transform.basis.z
 	var crouch_factor := 0.55 if player.get("is_crouched") else 1.0
 	if distance < 1.45 * crouch_factor:
 		return _has_line_of_sight()
-	return forward.normalized().dot(to_player.normalized()) > DETECT_ANGLE and distance < DETECT_DISTANCE * crouch_factor and _has_line_of_sight()
+	return forward.normalized().dot(to_player.normalized()) > DETECT_ANGLE and distance < effective_detect_distance * crouch_factor and _has_line_of_sight()
 
 func _has_line_of_sight() -> bool:
 	if not player:
@@ -183,6 +204,86 @@ func _create_visual() -> void:
 	cone.spot_angle = 34.0
 	cone.rotation_degrees.x = -12
 	add_child(cone)
+	_create_phone_prop()
+
+func _create_phone_prop() -> void:
+	phone_prop = Node3D.new()
+	phone_prop.name = "HostilePhoneProp"
+	phone_prop.position = Vector3(0.23, 1.18, -0.18)
+	phone_prop.rotation_degrees = Vector3(8, -18, 18)
+	phone_prop.visible = false
+	add_child(phone_prop)
+	var body := MeshInstance3D.new()
+	body.name = "PhoneBody"
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(0.065, 0.20, 0.035)
+	body.mesh = body_mesh
+	var body_mat := StandardMaterial3D.new()
+	body_mat.albedo_color = Color(0.015, 0.018, 0.018)
+	body_mat.roughness = 0.40
+	body_mat.metallic = 0.18
+	body.material_override = body_mat
+	phone_prop.add_child(body)
+	var screen := MeshInstance3D.new()
+	screen.name = "PhoneScreen"
+	var screen_mesh := BoxMesh.new()
+	screen_mesh.size = Vector3(0.050, 0.11, 0.006)
+	screen.mesh = screen_mesh
+	screen.position = Vector3(0, 0.015, -0.021)
+	var screen_mat := StandardMaterial3D.new()
+	screen_mat.albedo_color = Color(0.04, 0.11, 0.10)
+	screen_mat.emission_enabled = true
+	screen_mat.emission = Color(0.10, 0.60, 0.48)
+	screen_mat.emission_energy_multiplier = 0.32
+	screen.material_override = screen_mat
+	phone_prop.add_child(screen)
+
+func _setup_phone_event() -> void:
+	phone_event_timer = Timer.new()
+	phone_event_timer.one_shot = true
+	phone_event_timer.timeout.connect(_on_phone_event_timeout)
+	add_child(phone_event_timer)
+	phone_argument_delay_timer = Timer.new()
+	phone_argument_delay_timer.one_shot = true
+	phone_argument_delay_timer.wait_time = 3.35
+	phone_argument_delay_timer.timeout.connect(_start_phone_argument)
+	add_child(phone_argument_delay_timer)
+	phone_end_timer = Timer.new()
+	phone_end_timer.one_shot = true
+	phone_end_timer.wait_time = 14.0
+	phone_end_timer.timeout.connect(_end_phone_call)
+	add_child(phone_end_timer)
+	_schedule_next_phone_call()
+
+func _schedule_next_phone_call() -> void:
+	if phone_event_timer:
+		phone_event_timer.start(phone_rng.randf_range(180.0, 240.0))
+
+func _on_phone_event_timeout() -> void:
+	trigger_phone_call_for_test()
+
+func trigger_phone_call_for_test() -> void:
+	if phone_call_active:
+		return
+	phone_call_active = true
+	if phone_prop:
+		phone_prop.visible = true
+	AudioManager.play_spatial_sfx("phone_ring", global_position + Vector3(0, 1.20, 0), self, -4.5, phone_rng.randf_range(0.96, 1.03), 20.0)
+	SoundEventSystem.emit_sound(global_position, 7.0, self)
+	phone_argument_delay_timer.start()
+	phone_end_timer.start(17.2)
+
+func _start_phone_argument() -> void:
+	if not phone_call_active:
+		return
+	AudioManager.play_spatial_sfx("hostile_phone_argument", global_position + Vector3(0, 1.30, 0), self, -7.0, phone_rng.randf_range(0.92, 1.04), 22.0)
+	SoundEventSystem.emit_sound(global_position, 9.5, self)
+
+func _end_phone_call() -> void:
+	phone_call_active = false
+	if phone_prop:
+		phone_prop.visible = false
+	_schedule_next_phone_call()
 
 func _animate_visual(delta: float) -> void:
 	if not visual_root:

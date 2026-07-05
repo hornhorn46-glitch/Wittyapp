@@ -1,5 +1,40 @@
 # Playtest Report
 
+## 2026-07-05 Door, Security, and Audio Pass
+
+Run modes:
+
+```powershell
+python .\tests\validate_project.py
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --quiet --headless --path . --script tests\godot_audio_system.gd
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --quiet --headless --path . --script tests\godot_security_terminal.gd
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --quiet --headless --path . --script tests\godot_input_playtest.gd
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --quiet --path . --script tests\room_showcase_capture.gd
+```
+
+Result: passed.
+
+Checked:
+
+- Door panels were widened and aligned to the real trimmed openings; the first-door route still opens and passes.
+- The oversized imported doorway meshes were removed; clean rounded trims, threshold plates, and jamb shadow strips replace them.
+- Added an interactable security terminal; using it disables the security loop and reduces patrol vision/suspicion gain.
+- Added a real audio layer: menu music, gameplay music bed, communal room ambience, radiator knocks, water noise, phone ringing, hostile phone argument, softer door/throw sounds, and concrete footstep variants.
+- Hostile phone event is scheduled every 180-240 seconds and can be triggered in test; it shows a phone prop and creates spatial phone/argument audio.
+- Full input route still completes after the geometry and audio changes.
+- No Godot process remained after the final validation pass.
+
+Screenshots generated:
+
+- `artifacts/screenshots/showcase_01_start_room.png`
+- `artifacts/screenshots/showcase_02_door_hinge_handle.png`
+- `artifacts/screenshots/showcase_03_security_terminal.png`
+- `artifacts/screenshots/showcase_03_records_room.png`
+- `artifacts/screenshots/showcase_04_patrol_guard_scale.png`
+- `artifacts/screenshots/showcase_05_rescue_room_entry.png`
+- `artifacts/screenshots/showcase_06_rescue_npc_corner.png`
+- `artifacts/screenshots/showcase_07_exit_stairwell.png`
+
 ## 2026-07-05 Godot Polish Pass
 
 Run modes:
