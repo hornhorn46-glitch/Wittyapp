@@ -53,31 +53,31 @@ static func make_smooth_humanoid(node_name: String, body_color: Color, accent_co
 	var eye_mat := _make_material(Color(0.018, 0.022, 0.024), 0.45, 0.0)
 	var shoe_mat := _make_material(Color(0.025, 0.026, 0.026), 0.54, 0.08)
 	var belt_mat := _make_material(Color(0.055, 0.043, 0.034), 0.58, 0.0)
-	_add_capsule(root, "Torso", Vector3(0, 0.82, 0), 0.24, 0.78, body_mat)
-	_add_capsule(root, "Vest", Vector3(0, 0.86, -0.035), 0.18, 0.58, accent_mat)
-	_add_capsule(root, "Neck", Vector3(0, 1.17, 0), 0.070, 0.16, skin_mat)
-	_add_sphere(root, "Head", Vector3(0, 1.34, 0), Vector3(0.18, 0.20, 0.18), skin_mat)
-	_add_sphere(root, "HairOrCap", Vector3(0, 1.49, -0.02), Vector3(0.17, 0.08, 0.16), dark_mat if hostile else accent_mat)
+	_add_capsule(root, "Torso", Vector3(0, 0.82, 0), 0.205, 0.74, body_mat)
+	_add_capsule(root, "Vest", Vector3(0, 0.86, -0.030), 0.155, 0.50, accent_mat)
+	_add_capsule(root, "Neck", Vector3(0, 1.17, 0), 0.052, 0.14, skin_mat)
+	_add_sphere(root, "Head", Vector3(0, 1.33, 0), Vector3(0.145, 0.175, 0.145), skin_mat)
+	_add_sphere(root, "HairOrCap", Vector3(0, 1.455, -0.018), Vector3(0.140, 0.060, 0.132), dark_mat if hostile else accent_mat)
 	for eye_x in [-0.060, 0.060]:
-		_add_sphere(root, "Eye", Vector3(eye_x, 1.37, -0.162), Vector3(0.020, 0.014, 0.010), eye_mat)
-	_add_sphere(root, "Nose", Vector3(0, 1.32, -0.178), Vector3(0.022, 0.030, 0.018), skin_mat)
-	_add_sphere(root, "ShoulderLeft", Vector3(-0.24, 1.05, 0.0), Vector3(0.10, 0.08, 0.10), body_mat)
-	_add_sphere(root, "ShoulderRight", Vector3(0.24, 1.05, 0.0), Vector3(0.10, 0.08, 0.10), body_mat)
-	_add_box(root, "ChestPanel", Vector3(0, 0.98, -0.205), Vector3(0.26, 0.20, 0.018), accent_mat)
-	_add_box(root, "Belt", Vector3(0, 0.55, -0.205), Vector3(0.38, 0.055, 0.024), belt_mat)
-	_add_box(root, "BeltBuckle", Vector3(0, 0.555, -0.225), Vector3(0.075, 0.060, 0.020), accent_mat)
+		_add_sphere(root, "Eye", Vector3(eye_x * 0.78, 1.36, -0.132), Vector3(0.014, 0.010, 0.008), eye_mat)
+	_add_sphere(root, "Nose", Vector3(0, 1.31, -0.148), Vector3(0.017, 0.024, 0.014), skin_mat)
+	_add_sphere(root, "ShoulderLeft", Vector3(-0.22, 1.03, 0.0), Vector3(0.082, 0.066, 0.082), body_mat)
+	_add_sphere(root, "ShoulderRight", Vector3(0.22, 1.03, 0.0), Vector3(0.082, 0.066, 0.082), body_mat)
+	_add_box(root, "ChestPanel", Vector3(0, 0.98, -0.178), Vector3(0.22, 0.17, 0.014), accent_mat)
+	_add_box(root, "Belt", Vector3(0, 0.54, -0.177), Vector3(0.34, 0.045, 0.020), belt_mat)
+	_add_box(root, "BeltBuckle", Vector3(0, 0.545, -0.195), Vector3(0.060, 0.048, 0.016), accent_mat)
 	for side in [-1.0, 1.0]:
-		var arm := _add_capsule(root, "Arm", Vector3(side * 0.31, 0.78, 0.0), 0.055, 0.58, body_mat)
+		var arm := _add_capsule(root, "Arm", Vector3(side * 0.285, 0.77, 0.0), 0.047, 0.61, body_mat)
 		arm.rotation_degrees.z = side * -10.0
-		_add_sphere(root, "Hand", Vector3(side * 0.36, 0.47, 0.02), Vector3(0.065, 0.060, 0.065), skin_mat)
-		var leg := _add_capsule(root, "Leg", Vector3(side * 0.10, 0.31, 0.0), 0.075, 0.58, dark_mat)
+		_add_sphere(root, "Hand", Vector3(side * 0.335, 0.44, 0.02), Vector3(0.050, 0.046, 0.050), skin_mat)
+		var leg := _add_capsule(root, "Leg", Vector3(side * 0.09, 0.31, 0.0), 0.060, 0.66, dark_mat)
 		leg.rotation_degrees.z = side * 2.0
-		_add_box(root, "KneePad", Vector3(side * 0.10, 0.25, -0.075), Vector3(0.105, 0.075, 0.025), belt_mat)
-		_add_sphere(root, "Shoe", Vector3(side * 0.10, 0.03, -0.045), Vector3(0.09, 0.045, 0.16), shoe_mat)
+		_add_box(root, "KneePad", Vector3(side * 0.09, 0.23, -0.060), Vector3(0.082, 0.060, 0.020), belt_mat)
+		_add_sphere(root, "Shoe", Vector3(side * 0.09, 0.03, -0.040), Vector3(0.074, 0.038, 0.132), shoe_mat)
 	if hostile:
-		_add_sphere(root, "ShoulderBeacon", Vector3(0.18, 1.13, -0.18), Vector3(0.055, 0.055, 0.055), _make_emissive(Color(0.9, 0.10, 0.04), 0.45))
+		_add_sphere(root, "ShoulderBeacon", Vector3(0.16, 1.11, -0.16), Vector3(0.040, 0.040, 0.040), _make_emissive(Color(0.9, 0.10, 0.04), 0.45))
 	else:
-		_add_sphere(root, "RescueBadge", Vector3(-0.14, 1.05, -0.18), Vector3(0.045, 0.045, 0.045), _make_emissive(Color(0.15, 0.90, 0.66), 0.30))
+		_add_sphere(root, "RescueBadge", Vector3(-0.13, 1.03, -0.16), Vector3(0.036, 0.036, 0.036), _make_emissive(Color(0.15, 0.90, 0.66), 0.30))
 	return root
 
 static func _collect_bounds(root: Node3D) -> AABB:

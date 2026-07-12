@@ -1,5 +1,62 @@
 # Testing Log
 
+## Test run: 2026-07-12 presentation polish pass
+
+Command:
+```powershell
+python tests\validate_project.py
+```
+
+Result:
+- Passed/failed: Passed
+- Output: `8 validation tests passed.`
+- Fixes covered: project structure, required assets, localization, and updated script references.
+- Remaining risks: static validation does not evaluate rendered composition.
+
+Command:
+```powershell
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --headless --path . --script tests\godot_smoke.gd
+```
+
+Result:
+- Passed/failed: Passed
+- Output includes: `Godot smoke test passed.`
+- Fixes covered: GDScript compile warnings in the new finish-pass functions and generated WAV loader log noise.
+- Remaining risks: headless dummy renderer still prints `mesh_get_surface_count` cleanup noise after successful assertions.
+
+Command:
+```powershell
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --headless --path . --script tests\godot_input_playtest.gd
+```
+
+Result:
+- Passed/failed: Passed
+- Output includes: `Input-driven playtest passed.`
+- Fixes covered: mouse-look, E prompts/interactions, badge pickup, both doors, rescue NPC follow, safe-zone rescue, and exit completion after furniture scale changes.
+- Remaining risks: deterministic route validates the main route, not every free-roam camera angle.
+
+Command:
+```powershell
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --headless --path . --script tests\godot_audio_system.gd
+```
+
+Result:
+- Passed/failed: Passed
+- Output includes: `Audio system test passed.`
+- Fixes covered: audio manager still loads and plays expected sound streams after WAV loader cleanup.
+- Remaining risks: automated audio test checks stream/system behavior, not subjective mix quality.
+
+Command:
+```powershell
+tools\godot\Godot_v4.2.2-stable_win64_console.exe --path . --script tests\room_showcase_capture.gd
+```
+
+Result:
+- Passed/failed: Passed
+- Output includes: `Room showcase capture passed.`
+- Fixes covered: Forward+ rendered screenshots after the presentation polish pass.
+- Remaining risks: screenshots are review aids; final art direction still needs manual production-art iteration.
+
 ## Test run: 2026-07-03 final PBR/light/localization pass
 
 Command:

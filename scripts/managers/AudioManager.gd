@@ -58,9 +58,10 @@ func _load_stream(path: String) -> AudioStream:
 	if path.get_extension().to_lower() == "ogg":
 		return AudioStreamOggVorbis.load_from_file(path)
 	if path.get_extension().to_lower() == "wav":
-		var imported_stream := load(path) as AudioStream
-		if imported_stream:
-			return imported_stream
+		if FileAccess.file_exists(path + ".import"):
+			var imported_stream := load(path) as AudioStream
+			if imported_stream:
+				return imported_stream
 		return _load_wav_stream(path)
 	var stream := load(path) as AudioStream
 	if stream:

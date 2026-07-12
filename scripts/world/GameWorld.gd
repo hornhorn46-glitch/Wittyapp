@@ -4,16 +4,17 @@ signal main_menu_requested
 signal restart_requested
 
 const UIFactory := preload("res://scripts/ui/UIFactory.gd")
+const ModelVisuals := preload("res://scripts/world/ModelVisuals.gd")
 const FACTORY_MODELS := "res://assets/curated/models/factory/"
 const FURNITURE_MODELS := "res://assets/curated/models/furniture/"
 const PBR_TEXTURES := "res://assets/curated/textures/pbr/"
 const FACTORY_MODEL_SCALE_BOOST := 1.14
 const FURNITURE_MODEL_SCALE_BOOST := 1.22
-const CHAIR_MODEL_SCALE_BOOST := 1.66
-const BENCH_MODEL_SCALE_BOOST := 1.42
+const CHAIR_MODEL_SCALE_BOOST := 2.28
+const BENCH_MODEL_SCALE_BOOST := 1.58
 const RUG_MODEL_SCALE_BOOST := 1.36
 const SIDE_TABLE_MODEL_SCALE_BOOST := 1.22
-const TABLE_LAMP_MODEL_SCALE_BOOST := 1.48
+const TABLE_LAMP_MODEL_SCALE_BOOST := 1.56
 
 var player: Node3D
 var enemy: Node3D
@@ -518,6 +519,8 @@ func _add_furniture_model(file_name: String, position: Vector3, rotation_degrees
 	model.rotation_degrees = rotation_degrees_value
 	model.scale = scale_value * FURNITURE_MODEL_SCALE_BOOST * _furniture_extra_scale(file_name)
 	add_child(model)
+	if "rug" in file_name:
+		ModelVisuals.apply_material(model, _pbr_material("Carpet016", Color(0.42, 0.34, 0.27), Vector2(1.9, 1.35), 0.96, 0.44))
 	if _furniture_should_be_visual_only(file_name):
 		_make_visual_only(model)
 	return model
@@ -695,6 +698,7 @@ func _create_architectural_details() -> void:
 	_create_extra_room_dressing()
 	_create_room_interiors()
 	_create_micro_detail_layer()
+	_create_room_finish_pass()
 
 func _create_room_cove_edges(room_name: String, center: Vector3, size: Vector3) -> void:
 	var trim_color := Color(0.050, 0.064, 0.062)
@@ -918,6 +922,149 @@ func _create_micro_detail_layer() -> void:
 	_add_bounce_light(Vector3(6.75, 1.18, -4.55), Color(0.92, 0.78, 0.55), 0.14, 2.3)
 	_add_bounce_light(Vector3(14.35, 1.10, -7.85), Color(1.0, 0.58, 0.30), 0.20, 2.5)
 	_add_bounce_light(Vector3(12.90, 1.05, -12.35), Color(0.42, 0.95, 0.70), 0.12, 2.2)
+
+func _create_room_finish_pass() -> void:
+	for data in [
+		["Start", Vector3(0, 0, 0), Vector3(6, 2.8, 5)],
+		["Corridor", Vector3(6.5, 0, -1), Vector3(7, 2.8, 2.3)],
+		["Records", Vector3(6.5, 0, -4.1), Vector3(4.6, 2.8, 3.9)],
+		["Office", Vector3(6.5, 0, 1.65), Vector3(3.4, 2.8, 2.4)],
+		["Patrol", Vector3(13, 0, -1), Vector3(6, 2.8, 6)],
+		["Rescue", Vector3(13, 0, -7.8), Vector3(5.5, 2.8, 5)],
+		["Exit", Vector3(13.0, 0, -12.0), Vector3(4.2, 2.8, 3.4)],
+	]:
+		_create_ceiling_panel_grid(data[0], data[1], data[2])
+	_create_dirty_door_edges()
+	_create_floor_wear_pass()
+	_create_wall_labels_and_hardware()
+	_create_small_lived_in_props()
+	_create_light_quality_pass()
+
+func _create_ceiling_panel_grid(room_name: String, center: Vector3, size: Vector3) -> void:
+	var y := center.y + size.y - 0.045
+	var seam_color := Color(0.018, 0.023, 0.022, 0.72)
+	var x_line_count: int = maxi(1, int(floor(size.x / 1.55)))
+	var z_line_count: int = maxi(1, int(floor(size.z / 1.25)))
+	for i in range(1, x_line_count):
+		var x_offset := -size.x * 0.5 + float(i) * size.x / float(x_line_count)
+		_visual_box("%sPanelGridSeamX" % room_name, center + Vector3(x_offset, y, 0), Vector3(0.018, 0.016, max(0.35, size.z - 0.24)), seam_color)
+	for i in range(1, z_line_count):
+		var z_offset := -size.z * 0.5 + float(i) * size.z / float(z_line_count)
+		_visual_box("%sPanelGridSeamZ" % room_name, center + Vector3(0, y, z_offset), Vector3(max(0.35, size.x - 0.24), 0.016, 0.018), seam_color)
+	_visual_box("%sPanelAccessHatch" % room_name, center + Vector3(size.x * 0.22, y - 0.002, -size.z * 0.18), Vector3(0.70, 0.018, 0.48), Color(0.035, 0.042, 0.040, 0.76))
+	_visual_box("%sPanelWaterStain" % room_name, center + Vector3(-size.x * 0.24, y - 0.004, size.z * 0.20), Vector3(0.56, 0.014, 0.34), Color(0.035, 0.026, 0.018, 0.42))
+	if size.x > 4.0:
+		_cylinder_bar("%sOverheadConduit" % room_name, center + Vector3(0, y - 0.055, size.z * 0.36), 0.016, max(0.8, size.x - 0.7), "x", Color(0.070, 0.075, 0.070))
+
+func _create_dirty_door_edges() -> void:
+	for data in [
+		[Vector3(3.01, 0.94, -1.63), Vector3(0.026, 1.56, 0.20)],
+		[Vector3(3.01, 0.94, 0.05), Vector3(0.026, 1.56, 0.20)],
+		[Vector3(10.01, 0.94, -1.65), Vector3(0.026, 1.56, 0.20)],
+		[Vector3(10.01, 0.94, 0.10), Vector3(0.026, 1.56, 0.20)],
+		[Vector3(12.13, 0.94, -5.30), Vector3(0.20, 1.56, 0.026)],
+		[Vector3(13.87, 0.94, -5.30), Vector3(0.20, 1.56, 0.026)],
+		[Vector3(12.12, 0.94, -10.30), Vector3(0.20, 1.56, 0.026)],
+		[Vector3(13.88, 0.94, -10.30), Vector3(0.20, 1.56, 0.026)],
+	]:
+		_visual_box("DoorFrameHandGrime", data[0], data[1], Color(0.012, 0.015, 0.014, 0.38))
+	for data in [
+		[Vector3(3.0, 2.16, -0.78), Vector3(0.030, 0.24, 1.30)],
+		[Vector3(10.0, 2.16, -0.80), Vector3(0.030, 0.24, 1.30)],
+		[Vector3(13.0, 2.16, -5.30), Vector3(1.40, 0.24, 0.030)],
+		[Vector3(13.0, 2.16, -10.30), Vector3(1.40, 0.24, 0.030)],
+	]:
+		_visual_box("TopDoorShadowScuff", data[0], data[1], Color(0.006, 0.008, 0.008, 0.48))
+
+func _create_floor_wear_pass() -> void:
+	for data in [
+		[Vector3(2.60, 0.020, -0.80), Vector3(1.35, 0.016, 0.58)],
+		[Vector3(6.75, 0.020, -1.02), Vector3(2.70, 0.016, 0.38)],
+		[Vector3(10.35, 0.020, -1.02), Vector3(1.15, 0.016, 0.48)],
+		[Vector3(12.95, 0.020, -5.30), Vector3(0.92, 0.016, 0.78)],
+		[Vector3(13.00, 0.020, -10.30), Vector3(1.00, 0.016, 0.58)],
+	]:
+		_visual_box("TrafficWearScuff", data[0], data[1], Color(0.012, 0.018, 0.016, 0.36))
+	for data in [
+		[Vector3(7.92, 0.026, -3.12), 0.16],
+		[Vector3(11.35, 0.026, -2.35), 0.12],
+		[Vector3(14.45, 0.026, -6.72), 0.14],
+		[Vector3(12.52, 0.026, -11.80), 0.10],
+	]:
+		_create_round_floor_stain(data[0], data[1])
+
+func _create_round_floor_stain(position: Vector3, radius: float) -> void:
+	var stain := MeshInstance3D.new()
+	stain.name = "RoundFloorStain"
+	stain.position = position
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius * 0.88
+	mesh.height = 0.010
+	mesh.radial_segments = 28
+	stain.mesh = mesh
+	var stain_mat := StandardMaterial3D.new()
+	stain_mat.albedo_color = Color(0.010, 0.015, 0.014, 0.34)
+	stain_mat.roughness = 0.96
+	stain_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	stain.material_override = stain_mat
+	add_child(stain)
+
+func _create_wall_labels_and_hardware() -> void:
+	for data in [
+		[Vector3(2.90, 1.62, -1.72), Vector3(0.026, 0.28, 0.60), Color(0.040, 0.23, 0.20)],
+		[Vector3(10.08, 1.62, -0.18), Vector3(0.026, 0.26, 0.58), Color(0.22, 0.08, 0.060)],
+		[Vector3(14.30, 1.64, -5.22), Vector3(0.58, 0.26, 0.026), Color(0.040, 0.22, 0.19)],
+		[Vector3(12.20, 1.64, -10.20), Vector3(0.62, 0.26, 0.026), Color(0.035, 0.30, 0.22)],
+	]:
+		_soft_visual_box("RoomDoorPlaque", data[0], data[1], data[2], 0.025)
+	for data in [
+		[Vector3(-2.88, 1.20, 2.02), "x"],
+		[Vector3(8.74, 1.18, -5.62), "x"],
+		[Vector3(15.64, 1.20, -7.00), "x"],
+		[Vector3(11.05, 1.18, -11.55), "x"],
+	]:
+		_create_electrical_box(data[0], data[1])
+
+func _create_electrical_box(position: Vector3, axis: String) -> void:
+	var box := _soft_visual_box("ElectricalJunctionBox", position, _oriented_size(axis, Vector3(0.34, 0.46, 0.050)), Color(0.055, 0.068, 0.065), 0.030)
+	if axis == "x":
+		box.rotation_degrees.y = 90
+	var latch := _visual_box("ElectricalBoxLatch", position + _surface_offset(axis, 0.030), _oriented_size(axis, Vector3(0.055, 0.16, 0.018)), Color(0.20, 0.19, 0.14))
+	if axis == "x":
+		latch.rotation_degrees.y = 90
+
+func _create_small_lived_in_props() -> void:
+	_create_mug(Vector3(-0.36, 0.72, 2.12), Color(0.18, 0.28, 0.25))
+	_create_mug(Vector3(6.85, 0.86, 2.30), Color(0.28, 0.22, 0.16))
+	_create_mug(Vector3(18.18, 1.00, 1.00), Color(0.18, 0.18, 0.16))
+	_soft_visual_box("FoldedJacketReception", Vector3(-1.12, 0.70, 2.08), Vector3(0.50, 0.10, 0.38), Color(0.08, 0.13, 0.12), 0.08)
+	_soft_visual_box("FoldedBlanketCorner", Vector3(15.03, 0.86, -9.72), Vector3(0.30, 0.12, 0.78), Color(0.18, 0.08, 0.07), 0.07)
+	_soft_visual_box("PaddedDoorStopA", Vector3(2.82, 0.10, 0.06), Vector3(0.16, 0.12, 0.24), Color(0.08, 0.065, 0.045), 0.04)
+	_soft_visual_box("PaddedDoorStopB", Vector3(9.82, 0.10, 0.08), Vector3(0.16, 0.12, 0.24), Color(0.08, 0.065, 0.045), 0.04)
+	for data in [
+		[Vector3(5.62, 1.88, -2.02), Vector3(0.42, 0.028, 0.10)],
+		[Vector3(8.34, 1.62, -5.98), Vector3(0.38, 0.028, 0.10)],
+		[Vector3(10.52, 1.72, -8.72), Vector3(0.10, 0.028, 0.36)],
+	]:
+		_visual_box("DustyWallShelfEdge", data[0], data[1], Color(0.09, 0.070, 0.045))
+
+func _create_light_quality_pass() -> void:
+	for data in [
+		[Vector3(0.12, 2.02, -1.20), Color(1.0, 0.64, 0.36), 0.22, 2.2],
+		[Vector3(6.55, 2.02, -1.15), Color(0.66, 0.86, 0.76), 0.18, 2.1],
+		[Vector3(12.50, 2.04, -1.10), Color(1.0, 0.60, 0.32), 0.20, 2.4],
+		[Vector3(13.15, 2.02, -7.75), Color(1.0, 0.56, 0.28), 0.24, 2.5],
+	]:
+		_add_bounce_light(data[0], data[1], data[2], data[3])
+	_create_window_glare(Vector3(-3.06, 1.42, 1.0), "x", 1.18)
+	_create_window_glare(Vector3(15.70, 1.42, -7.4), "x", 1.16)
+	_create_window_glare(Vector3(10.4, 1.42, -10.36), "z", 1.12)
+
+func _create_window_glare(position: Vector3, axis: String, width: float) -> void:
+	var glare := _soft_visual_box("WindowSoftGlare", position + _surface_offset(axis, 0.032), _oriented_size(axis, Vector3(width, 0.78, 0.020)), Color(0.18, 0.46, 0.52, 0.20), 0.04)
+	if axis == "x":
+		glare.rotation_degrees.y = 90
 
 func _create_wall_outlet(position: Vector3, axis: String) -> void:
 	var plate := _soft_visual_box("WallOutletPlate", position, Vector3(0.09, 0.14, 0.018), Color(0.70, 0.68, 0.60), 0.015)
@@ -1458,34 +1605,34 @@ func _build_hud() -> void:
 	var top_panel := PanelContainer.new()
 	top_panel.anchor_left = 0.02
 	top_panel.anchor_top = 0.025
-	top_panel.anchor_right = 0.37
-	top_panel.anchor_bottom = 0.16
+	top_panel.anchor_right = 0.34
+	top_panel.anchor_bottom = 0.145
 	top_panel.add_theme_stylebox_override("panel", _hud_box())
 	canvas.add_child(top_panel)
 	var stack := VBoxContainer.new()
 	top_panel.add_child(stack)
 	var objective_row := HBoxContainer.new()
 	objective_row.add_theme_constant_override("separation", 10)
-	hud_objective = UIFactory.make_label("", 18)
+	hud_objective = UIFactory.make_label("", 16)
 	hud_objective.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hud_status = UIFactory.make_label("", 15, Color(0.54, 0.76, 0.68))
+	hud_status = UIFactory.make_label("", 13, Color(0.54, 0.76, 0.68))
 	objective_row.add_child(hud_objective)
-	objective_row.add_child(UIFactory.make_round_icon("?", 24))
+	objective_row.add_child(UIFactory.make_round_icon("?", 22))
 	stack.add_child(objective_row)
 	stack.add_child(hud_status)
-	hud_awareness_label = UIFactory.make_label(LocalizationManager.text("status.awareness"), 12, Color(0.70, 0.84, 0.78))
+	hud_awareness_label = UIFactory.make_label(LocalizationManager.text("status.awareness"), 11, Color(0.70, 0.84, 0.78))
 	stack.add_child(hud_awareness_label)
 	hud_awareness = ProgressBar.new()
-	hud_awareness.custom_minimum_size = Vector2(220, 8)
+	hud_awareness.custom_minimum_size = Vector2(190, 7)
 	hud_awareness.max_value = 100.0
 	hud_awareness.value = 0.0
 	hud_awareness.show_percentage = false
 	stack.add_child(hud_awareness)
-	hud_hint = UIFactory.make_label("", 20, Color(0.90, 0.95, 0.84))
+	hud_hint = UIFactory.make_label("", 18, Color(0.90, 0.95, 0.84))
 	hud_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud_hint.anchor_left = 0.24
 	hud_hint.anchor_right = 0.76
-	hud_hint.anchor_top = 0.88
+	hud_hint.anchor_top = 0.90
 	hud_hint.anchor_bottom = 0.97
 	canvas.add_child(hud_hint)
 	_build_interaction_overlay(canvas)
@@ -1515,10 +1662,10 @@ func _build_interaction_overlay(canvas: CanvasLayer) -> void:
 
 func _build_minimap(canvas: CanvasLayer) -> void:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.78
+	panel.anchor_left = 0.80
 	panel.anchor_top = 0.035
-	panel.anchor_right = 0.98
-	panel.anchor_bottom = 0.31
+	panel.anchor_right = 0.975
+	panel.anchor_bottom = 0.285
 	panel.add_theme_stylebox_override("panel", _hud_box())
 	canvas.add_child(panel)
 	var map_root := Control.new()
@@ -1693,7 +1840,7 @@ func _update_interaction_text() -> void:
 	hud_interaction.text = text
 	if hud_interaction_panel:
 		hud_interaction_panel.visible = text != ""
-	hud_crosshair.text = "◇" if text != "" else "+"
+	hud_crosshair.text = "E" if text != "" else "+"
 	hud_crosshair.add_theme_color_override("font_color", Color(1.0, 0.82, 0.35, 0.95) if text != "" else Color(0.84, 0.96, 0.88, 0.78))
 
 func _update_awareness_meter() -> void:

@@ -69,8 +69,8 @@ func is_rescued() -> bool:
 func _create_visual() -> void:
 	var collision := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.28
-	capsule.height = 1.52
+	capsule.radius = 0.25
+	capsule.height = 1.40
 	collision.shape = capsule
 	collision_shape = collision
 	add_child(collision)
@@ -80,7 +80,7 @@ func _create_visual() -> void:
 		var model: Node3D = packed.instantiate()
 		model.name = "CivilianVisual"
 		add_child(model)
-		CharacterVisuals.fit_model_height(model, 1.48, -0.35)
+		CharacterVisuals.fit_model_height(model, 1.36, -0.35)
 		visual_root = model
 		visual_base_y = model.position.y
 		visual_animation_player = CharacterVisuals.find_animation_player(model)
@@ -92,7 +92,7 @@ func _create_visual() -> void:
 			Color(0.66, 0.50, 0.40)
 		)
 		add_child(model)
-		CharacterVisuals.fit_model_height(model, 1.48, -0.35)
+		CharacterVisuals.fit_model_height(model, 1.36, -0.35)
 		visual_root = model
 		visual_base_y = model.position.y
 

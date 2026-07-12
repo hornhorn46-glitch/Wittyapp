@@ -20,3 +20,15 @@
 - Moved the safe zone away from the civilian spawn so rescue requires guiding the NPC instead of auto-completing.
 - Tuned down over-bright window/safe-zone lighting and captured final Russian screenshots on Vulkan/Forward+.
 - Latest validation, Godot smoke, deterministic playthrough, and final visual capture passed after the material/light/localization pass.
+
+## 2026-07-12
+- Started a new presentation polish pass from the existing Godot vertical slice.
+- Updated `memory/task_lock.md` with the current polish target: less blocky characters, better furniture scale, denser real-room dressing, clearer UI/interactions, and stable runnable tests.
+- Added a Central Consul decision in `memory/decisions.md` to keep the pass focused on the existing first level instead of migrating engines or adding a second level.
+- Refined stylized character proportions: smaller heads, slimmer rounded limbs, shorter hostile/civilian scale, brighter hostile clothing for readability.
+- Increased chair/bench/lamp scale and applied a unified muted PBR carpet material to rug models so furniture reads less toy-like.
+- Added a room finish layer: ceiling tile grids, access panels, water stains, overhead conduit, grime around door frames, traffic wear, small round floor stains, door plaques, electrical boxes, mugs, folded soft props, door stops, and extra soft bounce/window glare lights.
+- Tightened HUD composition and changed the focused interaction indicator to `E` for direct readability.
+- Removed noisy WAV loader errors by skipping Godot `load()` for unimported generated WAV files and using the existing manual WAV loader directly.
+- Captured fresh Forward+ showcase screenshots in `artifacts/screenshots/`.
+- Validation, Godot smoke, input-driven playthrough, audio-system test, and Forward+ visual capture passed after the polish pass.

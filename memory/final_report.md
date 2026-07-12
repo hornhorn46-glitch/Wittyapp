@@ -1,5 +1,27 @@
 # Final Report
 
+## 2026-07-12 Polish Update
+
+Status: playable and polished further for the current milestone.
+
+Implemented in this pass:
+- Tighter HUD sizing and clearer `E` focus indicator.
+- Less blocky stylized character proportions and slightly smaller hostile/civilian scale.
+- Larger chair/bench/lamp presentation and muted PBR carpet material for rug models.
+- Added ceiling grids, access panels, conduits, door-frame grime, floor traffic wear, small stains, plaques, electrical boxes, mugs, folded props, door stops, and additional soft bounce/window lights.
+- Cleaned generated WAV loading so unimported project WAVs do not spam loader errors before the manual WAV fallback.
+
+Validation performed after this pass:
+- `python tests\validate_project.py` passed: `8 validation tests passed.`
+- `tests/godot_smoke.gd` passed.
+- `tests/godot_input_playtest.gd` passed: mouse-look, E prompts, badge, doors, rescue, and exit flow.
+- `tests/godot_audio_system.gd` passed.
+- `tests/room_showcase_capture.gd` passed on Vulkan/Forward+; fresh screenshots are in `artifacts/screenshots/`.
+
+Remaining risk:
+- Headless Godot still prints dummy-renderer cleanup noise after successful assertions.
+- Characters and many props remain stylized low-poly stand-ins; next production-quality step is a cohesive licensed character/animation pack plus editor-authored baked lighting/occluder work.
+
 ## Result
 
 Complete for requested milestone. Silent Exit / Тихий выход is now a runnable Godot 4.x first playable: atmospheric menu, settings, EN/RU localization, generated license-safe audio/textures, 3D tutorial level, stealth distraction, hostile NPC, rescued civilian NPC, pause/win/fail flows, tests, screenshots, and reports.

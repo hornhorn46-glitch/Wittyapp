@@ -171,8 +171,8 @@ func awareness_text_key() -> String:
 func _create_visual() -> void:
 	var collision := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.30
-	capsule.height = 1.62
+	capsule.radius = 0.27
+	capsule.height = 1.48
 	collision.shape = capsule
 	add_child(collision)
 	var model_path := "res://assets/curated/models/quaternius/animated_human.glb"
@@ -181,27 +181,27 @@ func _create_visual() -> void:
 		var model: Node3D = packed.instantiate()
 		model.name = "HostileVisual"
 		add_child(model)
-		CharacterVisuals.fit_model_height(model, 1.58, -0.35)
+		CharacterVisuals.fit_model_height(model, 1.44, -0.35)
 		visual_root = model
 		visual_base_y = model.position.y
 		visual_animation_player = CharacterVisuals.find_animation_player(model)
 	else:
 		var model := CharacterVisuals.make_smooth_humanoid(
 			"HostileSmoothVisual",
-			Color(0.18, 0.17, 0.15),
-			Color(0.56, 0.10, 0.07),
+			Color(0.24, 0.23, 0.19),
+			Color(0.64, 0.12, 0.08),
 			Color(0.64, 0.47, 0.36),
 			true
 		)
 		add_child(model)
-		CharacterVisuals.fit_model_height(model, 1.58, -0.35)
+		CharacterVisuals.fit_model_height(model, 1.44, -0.35)
 		visual_root = model
 		visual_base_y = model.position.y
 	var cone := SpotLight3D.new()
 	cone.light_color = Color(1.0, 0.46, 0.32)
 	cone.light_energy = 1.2
-	cone.spot_range = 7.0
-	cone.spot_angle = 34.0
+	cone.spot_range = 6.5
+	cone.spot_angle = 32.0
 	cone.rotation_degrees.x = -12
 	add_child(cone)
 	_create_phone_prop()

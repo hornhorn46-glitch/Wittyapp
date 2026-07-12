@@ -6,8 +6,8 @@
 - Impact: No known gameplay impact; test output is noisy.
 - Next action: Investigate cleaner Godot test shutdown/render settings.
 
-## Low: First-pass generated art and audio
+## Low: Stylized low-poly presentation ceiling
 
-- Issue: Audio/textures are original generated assets, not curated production packs.
-- Impact: Playable milestone is coherent, but later polish can improve feel.
-- Next action: Replace the strongest candidates with curated CC0 assets and update `ASSET_CREDITS.md`.
+- Issue: The scene now has curated CC0 props/PBR materials and an additional detail pass, but characters and many props remain stylized rather than production-realistic.
+- Impact: The milestone reads as a polished indie vertical slice, not a high-fidelity commercial art pass.
+- Next action: Replace character stand-ins with a cohesive licensed character/animation pack and add baked lightmap/occluder work in the Godot editor.

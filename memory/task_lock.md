@@ -6,6 +6,9 @@ Build the first major playable milestone of a 3D Windows-runnable game named Sil
 ## Playable milestone
 A user can run the project through the chosen runner, open an atmospheric main menu, change audio/display/language settings, start a 3D tutorial level, learn movement/sneak/interact/pick-up/throw, distract a hostile NPC with a thrown item, rescue a civilian NPC, reach the exit, see win/fail flows, use pause/restart/menu flows, and verify the implementation with automated tests plus documented playtest results.
 
+## Current polish pass
+Raise the first level from functional vertical slice to a cleaner playable presentation pass: less blocky character silhouettes, better furniture scale, denser believable room dressing, clearer door/interact readability, tighter HUD composition, and stronger room-by-room lighting without breaking the existing Windows launcher or automated playthrough.
+
 ## Concrete deliverables
 - Godot 4.x project using text-based scenes/scripts.
 - Main menu with New Game, Settings, Credits, Exit.

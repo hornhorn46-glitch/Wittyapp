@@ -45,3 +45,27 @@ The assets are created in-repo, have clear ownership/origin, and can be validate
 ### Rejected alternatives
 - Random web asset scraping: license ambiguity.
 - No audio/placeholders only: explicitly forbidden by the task.
+# Decisions
+
+## Decision: Current polish pass priorities
+
+### Context
+The project already has a playable Godot vertical slice, but screenshots still show visible prototype traits: blocky character silhouettes, toy-scale chairs, large flat ceilings/walls, heavy HUD blocks, and uneven room readability.
+
+### Advisor notes
+- Product Strategist: Improve the first five seconds of presentation and keep the GitHub runnable build stable.
+- Game Designer: Preserve the tested route and interaction flow; do not add risky mechanics before presentation defects are addressed.
+- Visual/UI Director: Prioritize character proportions, furniture scale, room dressing, ceiling/wall breakup, and less intrusive HUD.
+- Engineering Architect: Keep changes local to existing scene-construction scripts and avoid engine migration.
+- QA / Test Auditor: Re-run validation, input playthrough, and visual capture after edits.
+- User Advocate: The user explicitly asked for polishing, fixed scale, real rooms, and no rough blockout feel.
+
+### Central Consul verdict
+Perform a presentation-focused pass on the existing level rather than rewriting the scene or adding a second level.
+
+### Why this is safe
+The changes are additive or tightly scoped to visual construction, actor proportions, and HUD display. Existing automated tests can verify that movement, mouse look, interactions, rescue, and win flow still work.
+
+### Rejected alternatives
+- Engine migration: high risk and not needed for this pass.
+- New level: increases content breadth while leaving current visible roughness unresolved.
