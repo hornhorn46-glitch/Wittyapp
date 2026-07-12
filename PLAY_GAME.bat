@@ -34,8 +34,15 @@ echo Starting Silent Exit...
 echo If the game window opens behind this console, switch to it with Alt+Tab.
 echo.
 
-"%GODOT%" --path "." --rendering-driver opengl3
+"%GODOT%" --path "."
 set "EXIT_CODE=%ERRORLEVEL%"
+
+if not "%EXIT_CODE%"=="0" (
+    echo.
+    echo Default renderer failed. Trying compatibility renderer...
+    "%GODOT%" --path "." --rendering-driver opengl3
+    set "EXIT_CODE=%ERRORLEVEL%"
+)
 
 echo.
 echo Silent Exit closed. Exit code: %EXIT_CODE%

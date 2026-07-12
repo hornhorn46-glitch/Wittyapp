@@ -13,6 +13,7 @@ const LOOK_SENSITIVITY := 0.0022
 const THROW_FORCE := 8.0
 const INTERACT_DISTANCE := 3.2
 const INTERACT_FOCUS_DOT := 0.82
+const MANUAL_MOUSE_DEADZONE_SQUARED := 0.25
 
 var camera: Camera3D
 var interact_ray: RayCast3D
@@ -23,6 +24,9 @@ var footstep_timer := 0.0
 var inventory := {}
 var current_focus_text := ""
 var gameplay_input_enabled := true
+var manual_mouse_position := Vector2.ZERO
+var manual_mouse_initialized := false
+var mouse_event_cooldown_frames := 0
 
 func _ready() -> void:
 	name = "Player"
@@ -30,6 +34,7 @@ func _ready() -> void:
 	_create_body()
 	_capture_mouse_for_gameplay()
 	call_deferred("_capture_mouse_for_gameplay")
+	set_process(true)
 	set_process_input(true)
 	set_process_unhandled_input(true)
 
@@ -59,11 +64,11 @@ func _unhandled_input(event: InputEvent) -> void:
 func _handle_gameplay_input(event: InputEvent) -> bool:
 	if not gameplay_input_enabled or not is_inside_tree() or get_tree().paused:
 		return false
-	if event is InputEventMouseButton and event.pressed and Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseButton and event.pressed and not _is_gameplay_mouse_mode():
 		_capture_mouse_for_gameplay()
 		return true
 	if event is InputEventMouseMotion and _can_look_with_mouse():
-		_apply_look_delta(event.relative)
+		handle_mouse_motion(event.relative)
 		return true
 	if event.is_action_pressed("interact"):
 		_try_interact()
@@ -77,28 +82,44 @@ func _handle_gameplay_input(event: InputEvent) -> bool:
 	return false
 
 func _can_look_with_mouse() -> bool:
-	return gameplay_input_enabled and (Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED or (is_inside_tree() and not get_tree().paused))
+	return gameplay_input_enabled and is_inside_tree() and not get_tree().paused
 
 func _capture_mouse_for_gameplay() -> void:
 	if gameplay_input_enabled and is_inside_tree() and not get_tree().paused:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if _is_headless_display() else Input.MOUSE_MODE_CONFINED_HIDDEN)
+		_reset_manual_mouse_tracking()
+
+func force_capture_mouse() -> void:
+	_capture_mouse_for_gameplay()
 
 func set_gameplay_input_enabled(enabled: bool) -> void:
 	gameplay_input_enabled = enabled
 	if not enabled:
 		current_focus_text = ""
+		manual_mouse_initialized = false
 		focus_changed.emit(current_focus_text)
 	else:
 		call_deferred("_capture_mouse_for_gameplay")
+
+func handle_mouse_motion(relative: Vector2) -> bool:
+	if not _can_look_with_mouse() or relative.length_squared() <= MANUAL_MOUSE_DEADZONE_SQUARED:
+		return false
+	_apply_look_delta(relative)
+	mouse_event_cooldown_frames = 2
+	_sync_manual_mouse_position()
+	return true
 
 func _apply_look_delta(relative: Vector2) -> void:
 	rotate_y(-relative.x * LOOK_SENSITIVITY)
 	look_pitch = clamp(look_pitch - relative.y * LOOK_SENSITIVITY, -1.25, 1.25)
 	camera.rotation.x = look_pitch
 
+func _process(_delta: float) -> void:
+	_update_manual_mouse_look()
+
 func _physics_process(delta: float) -> void:
-	if gameplay_input_enabled and Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if gameplay_input_enabled and not _is_gameplay_mouse_mode():
+		_capture_mouse_for_gameplay()
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var basis := global_transform.basis
 	var direction := (basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -115,6 +136,59 @@ func _physics_process(delta: float) -> void:
 	_update_held_item()
 	_update_footsteps(delta, direction.length() > 0.1)
 	_update_interaction_focus()
+
+func _is_gameplay_mouse_mode() -> bool:
+	return Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED or Input.get_mouse_mode() == Input.MOUSE_MODE_CONFINED_HIDDEN
+
+func _is_headless_display() -> bool:
+	return DisplayServer.get_name() == "headless"
+
+func _reset_manual_mouse_tracking() -> void:
+	manual_mouse_initialized = false
+	mouse_event_cooldown_frames = 2
+	call_deferred("_center_manual_mouse")
+
+func _center_manual_mouse() -> void:
+	if not _can_look_with_mouse() or not is_inside_tree():
+		return
+	var viewport := get_viewport()
+	if not viewport:
+		return
+	manual_mouse_position = viewport.get_visible_rect().size * 0.5
+	if not _is_headless_display():
+		viewport.warp_mouse(manual_mouse_position)
+	manual_mouse_initialized = true
+
+func _sync_manual_mouse_position() -> void:
+	if not is_inside_tree():
+		return
+	var viewport := get_viewport()
+	if viewport:
+		manual_mouse_position = viewport.get_mouse_position()
+		manual_mouse_initialized = true
+
+func _update_manual_mouse_look() -> void:
+	if not _can_look_with_mouse() or not _is_gameplay_mouse_mode():
+		manual_mouse_initialized = false
+		return
+	var viewport := get_viewport()
+	if not viewport:
+		return
+	var current := viewport.get_mouse_position()
+	if not manual_mouse_initialized:
+		manual_mouse_position = current
+		manual_mouse_initialized = true
+		return
+	if mouse_event_cooldown_frames > 0:
+		mouse_event_cooldown_frames -= 1
+		manual_mouse_position = current
+		return
+	var relative := current - manual_mouse_position
+	if relative.length_squared() > MANUAL_MOUSE_DEADZONE_SQUARED:
+		_apply_look_delta(relative)
+		_center_manual_mouse()
+	else:
+		manual_mouse_position = current
 
 func _try_interact() -> void:
 	var target := get_focused_interactable()

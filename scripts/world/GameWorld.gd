@@ -1637,6 +1637,7 @@ func _build_hud() -> void:
 	canvas.add_child(hud_hint)
 	_build_interaction_overlay(canvas)
 	_build_minimap(canvas)
+	_ignore_mouse_recursive(canvas)
 
 func _build_interaction_overlay(canvas: CanvasLayer) -> void:
 	hud_crosshair = UIFactory.make_label("+", 24, Color(0.84, 0.96, 0.88, 0.78))
@@ -1699,6 +1700,13 @@ func _minimap_marker(parent: Control, color: Color, pos: Vector2) -> ColorRect:
 	marker.color = color
 	parent.add_child(marker)
 	return marker
+
+func _ignore_mouse_recursive(node: Node) -> void:
+	if node is Control:
+		var control := node as Control
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in node.get_children():
+		_ignore_mouse_recursive(child)
 
 func _world_to_minimap(pos: Vector3) -> Vector2:
 	var x := remap(pos.x, -3.0, 19.3, 18.0, 236.0)
@@ -1787,7 +1795,8 @@ func _start_tutorial_from_intro() -> void:
 	get_tree().paused = false
 	if player and player.has_method("set_gameplay_input_enabled"):
 		player.set_gameplay_input_enabled(true)
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	_capture_gameplay_mouse()
+	call_deferred("_recapture_gameplay_mouse_after_ui")
 
 func _set_paused(value: bool) -> void:
 	if game_over:
@@ -1796,7 +1805,24 @@ func _set_paused(value: bool) -> void:
 	pause_menu.visible = value
 	if player and player.has_method("set_gameplay_input_enabled"):
 		player.set_gameplay_input_enabled(not value)
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if value else Input.MOUSE_MODE_CAPTURED)
+	if value:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		_capture_gameplay_mouse()
+		call_deferred("_recapture_gameplay_mouse_after_ui")
+
+func _capture_gameplay_mouse() -> void:
+	if player and player.has_method("force_capture_mouse"):
+		player.force_capture_mouse()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED_HIDDEN)
+
+func _recapture_gameplay_mouse_after_ui() -> void:
+	for i in range(4):
+		await get_tree().process_frame
+		if game_over or get_tree().paused:
+			return
+		_capture_gameplay_mouse()
 
 func _set_hint(key: String) -> void:
 	hud_hint.text = LocalizationManager.text(key) if key != "" else ""
